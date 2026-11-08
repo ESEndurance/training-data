@@ -1,0 +1,23 @@
+name: Garmin Sync
+
+on:
+  schedule:
+    - cron: '0 5 * * *'    # 05:00 UTC (~07/08 lokal tid)
+    - cron: '0 16 * * *'   # 16:00 UTC (~18/19 lokal tid)
+  workflow_dispatch:        # gör att du kan köra manuellt från GitHub-fliken "Actions"
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Installera beroenden
+        run: pip install -r requirements.txt
+      - name: Synka Garmin -> Supabase
+        env:
+          GARMIN_TOKEN_B64: ${{ secrets.GARMIN_TOKEN_B64 }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python garmin_sync.py sync --days 14

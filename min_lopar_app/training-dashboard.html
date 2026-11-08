@@ -1,0 +1,1496 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ES Endurance · MVP Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --red:#F93822;--bg:#09090e;--s1:#111117;--s2:#18181f;--s3:#1f1f28;
+  --border:#26262f;--text:#e6e6f0;--muted:#5a5a70;--dim:#9090a8;
+  --green:#22c55e;--yellow:#eab308;
+  --c1:#3b82f6;--c2:#22c55e;--c3:#f59e0b;--c4:#f97316;--c5:#ef4444;--c6:#c026d3;
+}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;background:var(--s1);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:200}
+.logo{display:flex;align-items:center;gap:9px;font-weight:800;font-size:14px;letter-spacing:.07em;text-transform:uppercase}
+.logo-pulse{width:9px;height:9px;background:var(--red);border-radius:50%;box-shadow:0 0 8px var(--red);animation:pulse 2.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 8px var(--red)}50%{opacity:.5;box-shadow:0 0 3px var(--red)}}
+.logo-sub{font-size:11px;font-weight:400;color:var(--muted);letter-spacing:.04em}
+.db-pill{display:flex;align-items:center;gap:6px;padding:5px 12px;background:var(--s2);border:1px solid var(--border);border-radius:20px;font-size:11px;color:var(--muted)}
+.db-dot{width:7px;height:7px;border-radius:50%;background:var(--yellow)}
+.db-pill.live .db-dot{background:var(--green);box-shadow:0 0 5px var(--green)}
+.nav{background:var(--s1);border-bottom:1px solid var(--border)}
+.nav-inner{display:flex;padding:0 24px}
+.nav-btn{padding:11px 18px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:all .18s;white-space:nowrap}
+.nav-btn:hover{color:var(--text)}
+.nav-btn.active{color:var(--red);border-bottom-color:var(--red)}
+.nav-mobile{display:none;padding:10px 16px;background:var(--s1);border-bottom:1px solid var(--border)}
+.nav-select{width:100%;background:var(--s2);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:7px;font-size:14px;font-weight:600;outline:none;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%235a5a70' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:38px}
+@media(max-width:640px){.nav-inner{display:none}.nav-mobile{display:block}}
+.page{display:none;padding:20px 24px;max-width:1200px;margin:0 auto}
+.page.active{display:block}
+.card{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:20px 22px;margin-bottom:18px}
+.card-title{font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:16px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:700px){.grid2{grid-template-columns:1fr}}
+.cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:12px;flex-wrap:wrap}
+.cal-nav{display:flex;align-items:center;gap:10px}
+.cal-arrow{background:var(--s3);border:1px solid var(--border);color:var(--text);width:32px;height:32px;border-radius:6px;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.cal-arrow:hover{border-color:var(--red);color:var(--red)}
+.cal-week-label{font-size:13px;font-weight:700;color:var(--text);min-width:140px;text-align:center}
+.cal-filter select{background:var(--s3);border:1px solid var(--border);color:var(--text);padding:6px 11px;border-radius:6px;font-size:12px;outline:none;cursor:pointer}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.cal-day{background:var(--s3);border:1px solid var(--border);border-radius:7px;padding:6px 4px;min-height:72px}
+.cal-day.today{border-color:var(--red)}
+.cal-day-head{font-size:8px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-bottom:1px}
+.cal-day-date{font-size:13px;font-weight:800;color:var(--text);margin-bottom:4px;font-variant-numeric:tabular-nums}
+.cal-day.today .cal-day-date{color:var(--red)}
+.cal-activity{background:rgba(249,56,34,.1);border:1px solid rgba(249,56,34,.22);border-radius:3px;padding:2px 4px;margin-bottom:2px;font-size:8px;line-height:1.35;color:var(--text)}
+.cal-activity .act-km{font-weight:700;color:var(--red);display:block}
+@media(max-width:500px){.cal-day{padding:4px;min-height:62px}.cal-day-date{font-size:12px}.cal-activity{font-size:8px}}
+.week-summary{display:grid;grid-template-columns:1fr;gap:18px}
+.week-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.wk-stat{background:var(--s3);border:1px solid var(--border);border-radius:8px;padding:12px 15px}
+.wk-stat .lbl{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.wk-stat .val{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums}
+.wk-stat .unt{font-size:11px;color:var(--muted);margin-left:2px}
+.zone-toggle{display:flex;gap:4px;margin-bottom:12px}
+.zt-btn{padding:5px 12px;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;border-radius:5px;border:1px solid var(--border);background:var(--s3);color:var(--muted);cursor:pointer;transition:all .15s}
+.zt-btn.active{background:var(--red);border-color:var(--red);color:#fff}
+.sum-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:0}
+.sum-sel{background:var(--s3);border:1px solid var(--border);color:var(--text);padding:5px 10px;border-radius:6px;font-size:11px;font-weight:600;outline:none;cursor:pointer}
+.sum-sel:focus{border-color:var(--red)}
+.zone-bar{display:flex;height:8px;border-radius:4px;overflow:hidden;margin-top:8px}
+.chart-wrap{position:relative;width:100%}
+.chart-wrap canvas{width:100%!important}
+.hrv-badge{display:inline-flex;align-items:center;gap:7px;padding:7px 15px;border-radius:7px;font-size:12px;font-weight:700;letter-spacing:.04em;margin-bottom:18px}
+.hrv-badge.ok{background:rgba(34,197,94,.12);color:var(--green)}
+.hrv-badge.warn{background:rgba(234,179,8,.1);color:var(--yellow)}
+.hrv-badge.low{background:rgba(239,68,68,.1);color:#ef4444}
+.hrv-lamp{width:8px;height:8px;border-radius:50%}
+.hrv-badge.ok .hrv-lamp{background:var(--green);box-shadow:0 0 6px var(--green)}
+.hrv-badge.warn .hrv-lamp{background:var(--yellow);box-shadow:0 0 6px var(--yellow)}
+.hrv-badge.low .hrv-lamp{background:#ef4444;box-shadow:0 0 6px #ef4444}
+.controls{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.controls label{font-size:10px;color:var(--muted);letter-spacing:.05em;text-transform:uppercase}
+.ctrl-sel{background:var(--s1);border:1px solid var(--border);color:var(--text);padding:6px 11px;border-radius:6px;font-size:12px;outline:none;cursor:pointer;min-width:160px}
+.ctrl-sel:focus{border-color:var(--red)}
+.legend{display:flex;gap:14px;margin-top:10px;flex-wrap:wrap}
+.legend span{font-size:10px}
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px}
+@media(max-width:680px){.settings-grid{grid-template-columns:1fr}}
+.zone-tbl{width:100%;border-collapse:collapse}
+.zone-tbl th{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);text-align:left;padding:0 0 9px;border-bottom:1px solid var(--border)}
+.zone-tbl td{padding:7px 0;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:middle}
+.z-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.z-name{font-size:12px;vertical-align:middle}
+.z-input{background:var(--s1);border:1px solid var(--border);color:var(--text);padding:5px 9px;border-radius:5px;font-size:13px;font-variant-numeric:tabular-nums;outline:none;width:82px;text-align:center}
+.z-input:focus{border-color:var(--red)}
+.z-input.err{border-color:#ef4444;background:rgba(239,68,68,.07)}
+.z-unit{font-size:10px;color:var(--muted);margin-left:4px}
+.save-row{display:flex;align-items:center;gap:12px;margin-top:8px}
+.btn{padding:8px 20px;background:var(--red);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:.04em;transition:opacity .18s}
+.btn:hover{opacity:.83}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted)}
+.btn-ghost:hover{border-color:var(--dim);color:var(--text);opacity:1}
+.save-ok{font-size:11px;color:var(--green);opacity:0;transition:opacity .25s}
+.save-ok.show{opacity:1}
+.input-row{display:grid;grid-template-columns:160px 1fr;gap:10px;align-items:center;margin-bottom:10px}
+.input-row label{font-size:12px;color:var(--muted)}
+.txt-input{background:var(--s1);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:6px;font-size:13px;outline:none;width:100%;max-width:420px}
+.txt-input:focus{border-color:var(--red)}
+.cfg-note{font-size:11px;color:var(--muted);line-height:1.7;margin-top:14px}
+.cfg-note code{color:var(--red)}
+.tl-panel{background:var(--s3);border:1px solid var(--border);border-radius:9px;padding:16px 18px;margin-top:16px}
+.tl-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+@media(max-width:480px){.tl-row{grid-template-columns:1fr}}
+.tl-stat{background:var(--s2);border:1px solid var(--border);border-radius:7px;padding:11px 14px}
+.tl-stat .lbl{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.tl-stat .val{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums}
+.tl-flag{display:flex;align-items:center;gap:8px;padding:9px 14px;border-radius:7px;font-size:12px;font-weight:700;margin-bottom:14px}
+.tl-flag.ok{background:rgba(34,197,94,.1);color:var(--green);border:1px solid rgba(34,197,94,.2)}
+.tl-flag.warn{background:rgba(239,68,68,.1);color:#ef4444;border:1px solid rgba(239,68,68,.2)}
+.tl-warn-text{font-size:11px;color:var(--yellow);margin-top:6px;display:none}
+.tl-warn-text.show{display:block}
+.anchor-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px}
+@media(max-width:540px){.anchor-grid{grid-template-columns:1fr}}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-pulse"></div>ES Endurance
+    <span class="logo-sub">· MVP Dashboard</span>
+  </div>
+  <div class="db-pill" id="dbPill"><div class="db-dot"></div><span id="dbStatus">Mock data</span></div>
+</div>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <button class="nav-btn active" onclick="showPage(0)">Kalender</button>
+    <button class="nav-btn" onclick="showPage(1)">Fart &amp; Puls</button>
+    <button class="nav-btn" onclick="showPage(2)">Belastning</button>
+    <button class="nav-btn" onclick="showPage(3)">HRV &amp; Somn</button>
+    <button class="nav-btn" onclick="showPage(4)">Lopteknik</button>
+    <button class="nav-btn" onclick="showPage(5)">Installningar</button>
+    <button class="nav-btn" onclick="showPage(6)">Analys</button>
+  </div>
+</nav>
+<div class="nav-mobile">
+  <select class="nav-select" id="navMob" onchange="showPage(+this.value)">
+    <option value="0">Kalender</option>
+    <option value="1">Fart &amp; Puls</option>
+    <option value="2">Belastning</option>
+    <option value="3">HRV &amp; Somn</option>
+    <option value="4">Lopteknik</option>
+    <option value="5">Installningar</option>
+    <option value="6">Analys</option>
+  </select>
+</div>
+
+<!-- PAGE 0: KALENDER -->
+<div class="page active" id="page-0">
+  <!-- STATISK TOPPRAD: dagens senaste HRV/somn + senaste pass -->
+  <div class="card" style="padding:14px 18px;margin-bottom:14px">
+    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px">
+      <div>
+        <div style="font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:3px">HRV senaste natt</div>
+        <div style="font-size:21px;font-weight:800;font-variant-numeric:tabular-nums" id="tbHrv">-</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px" id="tbHrvSub">-</div>
+      </div>
+      <div>
+        <div style="font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:3px">Somnpoang</div>
+        <div style="font-size:21px;font-weight:800;font-variant-numeric:tabular-nums" id="tbSleep">-</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px" id="tbSleepSub">-</div>
+      </div>
+      <div>
+        <div style="font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:3px">Somn</div>
+        <div style="font-size:21px;font-weight:800;font-variant-numeric:tabular-nums" id="tbSleepH">-</div>
+      </div>
+      <div>
+        <div style="font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:3px">Senaste pass</div>
+        <div style="font-size:13px;font-weight:600;margin-top:5px;line-height:1.35" id="tbLastPass">-</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="cal-header">
+      <div class="cal-nav">
+        <button class="cal-arrow" onclick="calShift(-1)">&#9664;</button>
+        <div class="cal-week-label" id="calLabel">-</div>
+        <button class="cal-arrow" onclick="calShift(1)">&#9654;</button>
+      </div>
+      <div class="cal-filter" style="display:flex;gap:8px">
+        <select id="calPeriod" onchange="renderCal();renderWeekSummary()">
+          <option value="1">1 vecka</option>
+          <option value="4">4 veckor</option>
+          <option value="12">12 veckor</option>
+        </select>
+        <select id="sportFilter" onchange="updateZoneToggle();renderCal();renderWeekSummary()">
+          <option value="all">Alla sporter</option>
+          <option value="running">Lopning</option>
+          <option value="cycling">Cykling</option>
+          <option value="skiing">Skidakning</option>
+          <option value="other">Ovriga</option>
+        </select>
+      </div>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+      <div class="card-title" style="margin:0">Summering</div>
+      <span style="font-size:10px;color:var(--muted)" id="sumPeriodLbl"></span>
+    </div>
+    <div class="week-summary">
+      <div class="week-stats">
+        <div class="wk-stat"><div class="lbl">Pass</div><div class="val" id="wkN">-</div></div>
+        <div class="wk-stat"><div class="lbl">Total tid</div><div class="val" id="wkT">-</div></div>
+        <div class="wk-stat"><div class="lbl">Distans</div><div class="val" id="wkD">-<span class="unt">km</span></div></div>
+        <div class="wk-stat"><div class="lbl">Snitt HRV</div><div class="val" id="wkHrv">-</div><div class="unt" id="wkHrvY" style="font-size:10px;margin-left:0"></div></div>
+        <div class="wk-stat"><div class="lbl">Snitt somnpoang</div><div class="val" id="wkSleep">-</div><div class="unt" id="wkSleepY" style="font-size:10px;margin-left:0"></div></div>
+        <div class="wk-stat"><div class="lbl">Snitt somn/natt</div><div class="val" id="wkSleepH">-</div><div class="unt" id="wkSleepHY" style="font-size:10px;margin-left:0"></div></div>
+      </div>
+      <div>
+        <div class="zone-toggle">
+          <button class="zt-btn active" id="ztHR" onclick="setZoneType('hr')">Pulszoner</button>
+          <button class="zt-btn" id="ztPace" onclick="setZoneType('pace')">Fartzoner</button>
+        </div>
+        <div class="chart-wrap" style="height:155px"><canvas id="wkZoneChart"></canvas></div>
+        <div class="zone-bar" id="wkZoneBar" style="margin-top:10px"></div>
+        <div class="legend" id="wkLegend" style="margin-top:8px"></div>
+      </div>
+    </div>
+
+    <!-- SENBELASTNING -->
+    <div class="tl-panel">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:12px">Senbelastningsindex</div>
+      <div id="tlFlag" class="tl-flag ok">
+        <span id="tlFlagText">Laddar...</span>
+      </div>
+      <div class="tl-row">
+        <div class="tl-stat">
+          <div class="lbl">Periodens senindex</div>
+          <div class="val" id="tlWeek">-</div>
+        </div>
+        <div class="tl-stat">
+          <div class="lbl">3-veckors rullande snitt</div>
+          <div class="val" id="tlAvg">-</div>
+        </div>
+      </div>
+      <div class="chart-wrap" style="height:160px"><canvas id="tlChart"></canvas></div>
+      <div class="legend" style="margin-top:8px">
+        <span style="color:#f97316">&#9679; Vecko-senindex</span>
+        <span style="color:#38bdf8">- - 3-veckors snitt</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 1: FART & PULS -->
+<div class="page" id="page-1">
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title">Puls vs Fart - enskilt pass</div>
+      <div class="controls">
+        <label>Pass</label>
+        <select class="ctrl-sel" id="aeActSel" onchange="renderAE()"></select>
+      </div>
+      <div class="chart-wrap" style="height:220px"><canvas id="aePHchart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Aerob effektivitet - trend</div>
+      <div class="controls">
+        <label>Referensfart</label>
+        <select class="ctrl-sel" id="aePaceSel" onchange="renderAETrend()"></select>
+      </div>
+      <div class="chart-wrap" style="height:220px"><canvas id="aeTrendChart"></canvas></div>
+      <div style="font-size:10px;color:var(--muted);margin-top:8px">AE = (m/s) / (puls/100). Stigande kurva = forbattrad lopekonomi.</div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 2: BELASTNING -->
+<div class="page" id="page-2">
+  <div class="card">
+    <div class="card-title">Load Index - akut (7d) vs kronisk (42d)</div>
+    <div class="chart-wrap" style="height:300px"><canvas id="loadChart"></canvas></div>
+    <div class="legend" style="margin-top:12px">
+      <span style="color:#94a3b8">&#9679; Daglig load</span>
+      <span style="color:#f97316">&#9679; Akut 7d - trotthet</span>
+      <span style="color:#22c55e">&#9679; Kronisk 42d - fitness</span>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 3: HRV & SOMN -->
+<div class="page" id="page-3">
+  <div id="hrvBadge" class="hrv-badge ok">
+    <div class="hrv-lamp"></div>
+    <span id="hrvBadgeTxt">Laddar...</span>
+  </div>
+  <div class="card">
+    <div class="card-title">HRV (RMSSD) &amp; Somnkvalitet - 90 dagar</div>
+    <div class="chart-wrap" style="height:290px"><canvas id="hrvChart"></canvas></div>
+    <div class="legend" style="margin-top:10px">
+      <span style="color:#a78bfa">&#9679; HRV RMSSD (ms)</span>
+      <span style="color:#38bdf8">&#9679; Somnpong</span>
+      <span style="color:rgba(239,68,68,.5)">- - 7d HRV-snitt</span>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 4: LOPTEKNIK -->
+<div class="page" id="page-4">
+
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:6px">
+      <div class="card-title" style="margin:0">Running Dynamics per fartzon</div>
+      <label style="display:flex;align-items:center;gap:7px;font-size:11px;color:var(--muted);cursor:pointer">
+        <input type="checkbox" id="rdExcludeTreadmill" checked onchange="renderRunDyn()" style="cursor:pointer">
+        Exkludera loopbandspass
+      </label>
+    </div>
+    <p style="font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:16px">
+      Kadens och vertikal forflyttning ar tillforlitliga att jamfora over tid. Marktid varierar mer mellan sensorer och bor tolkas som relativ trend, inte absolutvarde. Loopband ger avvikande varden pga GPS/barometer-skillnader och exkluderas darfor som standard.
+    </p>
+    <div class="grid2" style="margin-bottom:0">
+      <div>
+        <div style="font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:10px">Kadens per fartzon (spm)</div>
+        <div class="chart-wrap" style="height:210px"><canvas id="rdCadenceChart"></canvas></div>
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:10px">Vertikal ratio per fartzon (%)</div>
+        <div class="chart-wrap" style="height:210px"><canvas id="rdVratioChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Marktid &amp; teknisk trotthet</div>
+    <p style="font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:14px">
+      Okande marktid och vertikal oscillation sent i langpass ar en palitlig signal pa teknisk trotthet, aven om absolutvardena varierar mellan sensorer.
+    </p>
+    <div class="controls">
+      <label>Pass</label>
+      <select class="ctrl-sel" id="rdActSel" onchange="renderRunDynDrift()"></select>
+    </div>
+    <div class="chart-wrap" style="height:220px"><canvas id="rdDriftChart"></canvas></div>
+    <div class="legend" style="margin-top:10px">
+      <span style="color:#f97316">&#9679; Marktid (ms)</span>
+      <span style="color:#38bdf8">&#9679; Vertikal oscillation (mm)</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- PAGE 5: INSTALLNINGAR -->
+<div class="page" id="page-5">
+  <div class="card">
+    <div class="card-title">Senbelastning - ankarpunkter</div>
+    <p style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:16px">
+      Tre individuella farter kalibrerar din personliga belastningskurva. Format: mm:ss per km.
+    </p>
+    <div class="anchor-grid">
+      <div>
+        <div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:7px">Ref-fart (LPK 1.0)</div>
+        <input class="z-input" id="tlRef" placeholder="05:15" style="width:100%">
+        <div style="font-size:10px;color:var(--muted);margin-top:4px">Lugnt langpasstemp</div>
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:7px">Max-fart (LPK 7.0)</div>
+        <input class="z-input" id="tlMax" placeholder="03:00" style="width:100%">
+        <div style="font-size:10px;color:var(--muted);margin-top:4px">Snabbaste kortdrag</div>
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:7px">Troskel-fart (verif.)</div>
+        <input class="z-input" id="tlThresh" placeholder="03:50" style="width:100%">
+        <div style="font-size:10px;color:var(--muted);margin-top:4px">Intervalltemp</div>
+      </div>
+    </div>
+    <div id="tlAnchorWarn" class="tl-warn-text">Kontrollera dina ankarpunkter - LPK vid troskeltemp bor landa mellan 3.0 och 4.5.</div>
+    <div style="margin-top:8px;font-size:11px;color:var(--muted)" id="tlKDisplay"></div>
+    <div class="save-row" style="margin-top:14px">
+      <button class="btn" onclick="saveTLAnchors()">Spara ankarpunkter</button>
+      <button class="btn btn-ghost" onclick="resetTLAnchors()">Atersta standard</button>
+      <span class="save-ok" id="tlSaveOk">Sparat</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Dina zoner</div>
+    <p style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:18px">Ange ovre gransvarde per zon. Fartzonerna ar Z1-Z6 (ovre grans); Z0 Aterhamtning = langsammare an Z1. Sparas i weblasaren och uppdaterar alla grafer direkt.</p>
+    <div class="settings-grid">
+      <div>
+        <div style="font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:9px">Pulszoner (Olympiatoppen)</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:11px">
+          <label style="font-size:11px;color:var(--muted)">Maxpuls</label>
+          <input class="z-input" id="maxHrInput" placeholder="200" style="width:70px"><span class="z-unit">bpm</span>
+          <button class="btn" style="padding:5px 12px;font-size:11px" onclick="saveMaxHr()">Spara</button>
+          <span class="save-ok" id="maxHrOk">Sparat</span>
+        </div>
+        <table class="zone-tbl">
+          <thead><tr><th colspan="2">Zon</th><th>Puls (bpm)</th></tr></thead>
+          <tbody id="hrZoneRefBody"></tbody>
+        </table>
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:11px">Fartzoner - ovre grans (min:sek/km)</div>
+        <table class="zone-tbl">
+          <thead><tr><th colspan="2">Zon</th><th>Grans</th></tr></thead>
+          <tbody>
+            <tr><td><span class="z-dot" style="background:var(--c1)"></span></td><td><span class="z-name">Z1 Lugn distans</span></td><td><input class="z-input" id="pZ1" placeholder="05:30"><span class="z-unit">min/km</span></td></tr>
+            <tr><td><span class="z-dot" style="background:var(--c2)"></span></td><td><span class="z-name">Z2 Aerob</span></td><td><input class="z-input" id="pZ2" placeholder="04:45"><span class="z-unit">min/km</span></td></tr>
+            <tr><td><span class="z-dot" style="background:var(--c3)"></span></td><td><span class="z-name">Z3 Marathontempo</span></td><td><input class="z-input" id="pZ3" placeholder="04:20"><span class="z-unit">min/km</span></td></tr>
+            <tr><td><span class="z-dot" style="background:var(--c4)"></span></td><td><span class="z-name">Z4 Troskel</span></td><td><input class="z-input" id="pZ4" placeholder="03:50"><span class="z-unit">min/km</span></td></tr>
+            <tr><td><span class="z-dot" style="background:var(--c5)"></span></td><td><span class="z-name">Z5 VO2max</span></td><td><input class="z-input" id="pZ5" placeholder="03:35"><span class="z-unit">min/km</span></td></tr>
+            <tr><td><span class="z-dot" style="background:var(--c6)"></span></td><td><span class="z-name">Z6 Anaerob</span></td><td><input class="z-input" id="pZ6" placeholder="03:10"><span class="z-unit">min/km</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="save-row">
+      <button class="btn" onclick="saveZones()">Spara zoner</button>
+      <button class="btn btn-ghost" onclick="resetZones()">Atersta standard</button>
+      <span class="save-ok" id="saveOk">Sparat</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Datakalla - Supabase</div>
+    <p style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:16px">Appen visar mock-data tills dina nycklar ar ifyllda.</p>
+    <div class="input-row"><label>Supabase URL</label><input class="txt-input" id="cfgUrl" placeholder="https://xxxx.supabase.co"/></div>
+    <div class="input-row"><label>Anon Key</label><input class="txt-input" type="password" id="cfgKey" placeholder="eyJhbGci..."/></div>
+    <button class="btn" style="margin-top:10px" onclick="connectSupabase()">Anslut</button>
+    <div class="cfg-note">
+      Tabeller: <code>running_activities</code> (zone_0_sec-zone_5_sec, pace_zone_0_sec-pace_zone_6_sec, load_index, tendon_load_index, is_treadmill, garmin_activity_id, ...),
+      <code>activity_blocks</code> och vyn <code>health_metrics</code> (slar ihop sleep_hrv_metrics + daily_recovery_metrics). Load index &amp; senbelastning raknas live i appen; Supabase-kolumnerna ar historiska snapshots.
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 6: ANALYS -->
+<div class="page" id="page-6">
+  <div class="card">
+    <div class="cal-header" style="margin-bottom:12px">
+      <div class="card-title" style="margin:0">Veckoanalys</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <label style="font-size:11px;color:var(--muted)">Fran</label>
+        <input type="date" class="sum-sel" id="anFrom" onchange="renderAnalysis()">
+        <label style="font-size:11px;color:var(--muted)">Till</label>
+        <input type="date" class="sum-sel" id="anTo" onchange="renderAnalysis()">
+        <div style="position:relative">
+          <button class="btn btn-ghost" style="padding:6px 12px;font-size:11px" onclick="toggleColMenu()">Kolumner &#9662;</button>
+          <div id="colMenu" style="display:none;position:absolute;right:0;top:38px;z-index:50;background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:12px;max-height:340px;overflow-y:auto;width:230px;box-shadow:0 8px 24px rgba(0,0,0,.5)"></div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
+      <span style="font-size:11px;color:var(--muted)">Block-pulsband:</span>
+      <select class="sum-sel" id="anBandA" onchange="renderAnalysis()"></select>
+      <select class="sum-sel" id="anBandB" onchange="renderAnalysis()"></select>
+    </div>
+    <div style="overflow-x:auto"><table class="zone-tbl" id="anTable" style="white-space:nowrap"></table></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Jamforelsegrafer (max 2 kurvor per graf)</div>
+    <div id="anCharts"></div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════
+// CONFIG
+// ══════════════════════════════════
+const SUPABASE_URL = 'https://lqfrdgwosiuxennsedxn.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxxZnJkZ3dvc2l1eGVubnNlZHhuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5ODU0ODAsImV4cCI6MjA5NTU2MTQ4MH0.GXoIFdXgfZejWcGgwt21NA8FFq0wCFrzulZmp24QrNQ';
+
+// ══════════════════════════════════
+// ZONES
+// ══════════════════════════════════
+const ZONE_KEY = 'esEnd_zones_v4';
+// Fartzoner enligt kalibreringen i denna chat: ovre grans (sek/km) for Z1-Z6.
+// Z0 Aterhamtning = langsammare an Z1 (>5:30/km).
+const ZONE_DEF = { hr:[120,138,152,163,180], pace:[330,285,260,230,215,190] };
+let ZC = { hr:[...ZONE_DEF.hr], pace:[...ZONE_DEF.pace] };
+// 7 fartzoner Z0..Z6
+const PACE_ZONE_LABELS = ['Z0 Aterhamtning','Z1 Lugn distans','Z2 Aerob','Z3 Marathontempo','Z4 Troskel','Z5 VO2max','Z6 Anaerob'];
+const PACE_ZONE_KEYS = ['pace_zone_0_sec','pace_zone_1_sec','pace_zone_2_sec','pace_zone_3_sec','pace_zone_4_sec','pace_zone_5_sec','pace_zone_6_sec'];
+// Representativ fart (sek/km) per zon Z0..Z6 for senbelastningsberakning
+const PACE_ZONE_REP = [360,307,272,245,222,202,180];
+// Pulszoner Z0..Z5 (Olympiatoppen, % av maxpuls)
+const HR_ZONE_LABELS = ['Z0 <60%','Z1 60-72%','Z2 72-82%','Z3 82-87%','Z4 87-92%','Z5 92%+'];
+const HR_ZONE_KEYS = ['zone_0_sec','zone_1_sec','zone_2_sec','zone_3_sec','zone_4_sec','zone_5_sec'];
+// Nedre %-grans per pulszon (Olympiatoppen) - for att visa bpm-intervall vid vald maxpuls
+const HR_ZONE_PCT = [0, 0.60, 0.72, 0.82, 0.87, 0.92];
+
+// ══════════════════════════════════
+// MAXPULS (installning i appen)
+// ══════════════════════════════════
+const MAXHR_KEY = 'esEnd_maxhr_v1';
+let MAX_HR_APP = 200;
+function loadMaxHr(){
+  const v = parseInt(localStorage.getItem(MAXHR_KEY)||'',10);
+  if(!isNaN(v) && v>=120 && v<=230) MAX_HR_APP = v;
+  const el = document.getElementById('maxHrInput'); if(el) el.value = MAX_HR_APP;
+  renderHrZoneRef();
+}
+function saveMaxHr(){
+  const el = document.getElementById('maxHrInput');
+  const v = parseInt(el.value,10);
+  if(isNaN(v)||v<120||v>230){ el.classList.add('err'); return; }
+  el.classList.remove('err');
+  MAX_HR_APP = v; localStorage.setItem(MAXHR_KEY, String(v));
+  renderHrZoneRef();
+  const fb=document.getElementById('maxHrOk'); if(fb){ fb.classList.add('show'); setTimeout(()=>fb.classList.remove('show'),2500); }
+  renderLoad();               // load index beror pa maxpuls
+  if(typeof renderWeekSummary==='function') renderWeekSummary();
+}
+// Fyll bpm-intervall i pulszons-referenstabellen utifran MAX_HR_APP
+function renderHrZoneRef(){
+  const body = document.getElementById('hrZoneRefBody'); if(!body) return;
+  const bnd = HR_ZONE_PCT.map(p=>Math.round(MAX_HR_APP*p)); // [.., .., ..]
+  const ranges = HR_ZONE_LABELS.map((lab,i)=>{
+    const lo = bnd[i];
+    const hi = i<HR_ZONE_PCT.length-1 ? bnd[i+1] : MAX_HR_APP;
+    return i===0 ? '&lt;'+bnd[1] : (i===HR_ZONE_LABELS.length-1 ? lo+'-'+MAX_HR_APP : lo+'-'+hi);
+  });
+  const dots = ['#64748b','var(--c1)','var(--c2)','var(--c3)','var(--c4)','var(--c5)'];
+  body.innerHTML = HR_ZONE_LABELS.map((lab,i)=>
+    '<tr><td><span class="z-dot" style="background:'+dots[i]+'"></span></td><td><span class="z-name">'+lab+'</span></td><td><span class="z-name">'+ranges[i]+'</span></td></tr>'
+  ).join('');
+}
+
+// ══════════════════════════════════
+// TENDON LOAD (SENBELASTNING)
+// ══════════════════════════════════
+const TL_KEY = 'esEnd_tendon_v1';
+const TL_DEF = { ref: 315, max: 180, thresh: 230 }; // seconds/km: 5:15, 3:00, 3:50
+let TLC = { ...TL_DEF };
+
+// Convert pace seconds to decimal minutes (e.g. 315s = 5.25 min/km)
+function secToDecMin(s){ return s / 60; }
+
+function calcK(ref, max){
+  // ref/max in seconds/km
+  const refMin = secToDecMin(ref);
+  const maxMin = secToDecMin(max);
+  return Math.log(7.0) / (refMin - maxMin);
+}
+
+function calcLPK(k, refSec, paceSec){
+  const refMin  = secToDecMin(refSec);
+  const paceMin = secToDecMin(paceSec);
+  return Math.exp(k * (refMin - paceMin));
+}
+
+function calcTendonLoad(activity){
+  // Raknas alltid live fran fartzonerna sa att dina ankarpunkter slar igenom.
+  // (Supabase-kolumnen tendon_load_index ar en snapshot for AI/historik, inte for appen.)
+  if(!isRunAny(activity.sport_type)) return 0;
+  const k = calcK(TLC.ref, TLC.max);
+  // Zonbaserat: for varje fartzon -> distans (tid/fart) x LPK vid zonens representativa fart.
+  // Fangar intervallpass korrekt (snabb tid ger hog last), till skillnad fran ett enda snittfart.
+  let load = 0, hasZoneData = false;
+  for(let z=0; z<=6; z++){
+    const sec = activity[PACE_ZONE_KEYS[z]] || 0;
+    if(sec <= 0) continue;
+    hasZoneData = true;
+    const rep = PACE_ZONE_REP[z];           // sek/km
+    const km  = sec / rep;                    // distans i zonen
+    load += km * calcLPK(k, TLC.ref, rep);    // last = distans x LPK(zonfart)
+  }
+  // Fallback for gammal data utan fartzoner: anvand pace_10s + total distans.
+  if(!hasZoneData){
+    if(!activity.pace_10s) return 0;
+    load = activity.distance_km * calcLPK(k, TLC.ref, activity.pace_10s);
+  }
+  return Math.round(load * 100) / 100;
+}
+
+function loadTLAnchors(){
+  try{
+    const d = JSON.parse(localStorage.getItem(TL_KEY)||'{}');
+    if(d.ref)    TLC.ref    = d.ref;
+    if(d.max)    TLC.max    = d.max;
+    if(d.thresh) TLC.thresh = d.thresh;
+  }catch(e){}
+  const el = id => document.getElementById(id);
+  if(el('tlRef'))    el('tlRef').value    = fmtPace(TLC.ref);
+  if(el('tlMax'))    el('tlMax').value    = fmtPace(TLC.max);
+  if(el('tlThresh')) el('tlThresh').value = fmtPace(TLC.thresh);
+  updateKDisplay();
+}
+
+function updateKDisplay(){
+  const k = calcK(TLC.ref, TLC.max);
+  const lpkT = calcLPK(k, TLC.ref, TLC.thresh);
+  const warn = document.getElementById('tlAnchorWarn');
+  const disp = document.getElementById('tlKDisplay');
+  const valid = lpkT >= 3.0 && lpkT <= 4.5;
+  if(warn){ warn.classList.toggle('show', !valid); }
+  if(disp){ disp.textContent = 'k = '+k.toFixed(4)+' | LPK vid troskeltemp: '+lpkT.toFixed(2)+(valid?' (OK)':' (utanfor 3.0-4.5)'); }
+}
+
+function saveTLAnchors(){
+  const ref    = parsePace(document.getElementById('tlRef').value);
+  const max    = parsePace(document.getElementById('tlMax').value);
+  const thresh = parsePace(document.getElementById('tlThresh').value);
+  if(isNaN(ref)||isNaN(max)||isNaN(thresh)||max>=ref||thresh>=ref){
+    alert('Ogiltiga ankarpunkter. Max-fart maste vara snabbare an ref-fart.');
+    return;
+  }
+  TLC = {ref, max, thresh};
+  localStorage.setItem(TL_KEY, JSON.stringify(TLC));
+  updateKDisplay();
+  renderWeekSummary();
+  const fb = document.getElementById('tlSaveOk');
+  fb.classList.add('show'); setTimeout(()=>fb.classList.remove('show'), 2500);
+}
+
+function resetTLAnchors(){
+  TLC = {...TL_DEF};
+  localStorage.removeItem(TL_KEY);
+  loadTLAnchors();
+  renderWeekSummary();
+}
+
+// Weekly tendon load for a given week offset
+function weekTendonLoad(weekOffset){
+  const ws = weekStart(weekOffset);
+  const we = new Date(ws); we.setDate(ws.getDate()+6); we.setHours(23,59,59);
+  const ws0 = new Date(ws); ws0.setHours(0,0,0,0);
+  const acts = DATA.activities.filter(a=>{
+    const d=new Date(a.date); return d>=ws0 && d<=we && isRunAny(a.sport_type);
+  });
+  return Math.round(acts.reduce((s,a)=>s+calcTendonLoad(a),0)*10)/10;
+}
+
+function renderTendonPanel(){
+  // Current period tendon load (same week range as summary)
+  const weeks = calPeriodN();
+  const ws = weekStart(calOffset);
+  const endDate = new Date(ws); endDate.setDate(ws.getDate()+6); endDate.setHours(23,59,59);
+  const startDate = new Date(endDate); startDate.setDate(endDate.getDate()-weeks*7+1); startDate.setHours(0,0,0,0);
+  const periodActs = DATA.activities.filter(a=>{
+    const d=new Date(a.date); return d>=startDate && d<=endDate && isRunAny(a.sport_type);
+  });
+  const periodTL = Math.round(periodActs.reduce((s,a)=>s+calcTendonLoad(a),0)*10)/10;
+
+  // 3-week rolling average ending at end of current calendar week
+  const prev3 = [weekTendonLoad(calOffset-3), weekTendonLoad(calOffset-2), weekTendonLoad(calOffset-1)];
+  const avg3 = Math.round(prev3.reduce((s,v)=>s+v,0)/3*10)/10;
+
+  document.getElementById('tlWeek').textContent = periodTL.toFixed(1);
+  document.getElementById('tlAvg').textContent  = avg3 > 0 ? avg3.toFixed(1) : '-';
+
+  // Flag
+  const flag = document.getElementById('tlFlag');
+  const flagTxt = document.getElementById('tlFlagText');
+  flag.className = 'tl-flag';
+  if(avg3 > 0 && periodTL > avg3 * 1.30){
+    flag.classList.add('warn');
+    flagTxt.textContent = 'HOG RISK FOR SENOVERLASTNING - Progression >' + Math.round((periodTL/avg3-1)*100) + '% over 3-veckorssnitt';
+  } else {
+    flag.classList.add('ok');
+    const pct = avg3 > 0 ? '+'+Math.round((periodTL/avg3-1)*100)+'%' : 'ingen tidigare data';
+    flagTxt.textContent = 'Saker progression - ' + pct + ' vs 3-veckorssnitt';
+  }
+
+  // Chart: last 12 weeks of weekly tendon load
+  const chartLabels=[], barData=[], lineData=[];
+  for(let i=11;i>=0;i--){
+    const wOff = calOffset - i;
+    const wl = weekTendonLoad(wOff);
+    const ws2 = weekStart(wOff);
+    chartLabels.push((ws2.getDate())+'/'+(ws2.getMonth()+1));
+    barData.push(wl);
+    // 3w rolling avg for chart
+    if(i<=8){
+      const a3=[weekTendonLoad(wOff-3),weekTendonLoad(wOff-2),weekTendonLoad(wOff-1)];
+      lineData.push(Math.round(a3.reduce((s,v)=>s+v,0)/3*10)/10);
+    } else {
+      lineData.push(null);
+    }
+  }
+
+  kill('tlChart');
+  const ctx = document.getElementById('tlChart').getContext('2d');
+  CH.tlChart = new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels: chartLabels,
+      datasets:[
+        {type:'bar',  data:barData,  backgroundColor:'rgba(249,118,22,.55)', borderColor:'#f97316', borderWidth:1, borderRadius:4, order:2},
+        {type:'line', data:lineData, borderColor:'#38bdf8', backgroundColor:'transparent', borderDash:[5,4], pointRadius:3, pointBackgroundColor:'#38bdf8', tension:.4, borderWidth:2, order:1}
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>c.dataset.type==='bar'?'Senindex: '+c.raw:'3v snitt: '+c.raw}}},
+      scales:{
+        x:{grid:grd, ticks:{...tck,maxRotation:45,minRotation:30}},
+        y:{grid:grd, ticks:{...tck,callback:v=>v}, title:{display:true,text:'Senindex',color:'#5a5a70'}}
+      }
+    }
+  });
+}
+
+function parsePace(s){
+  if(!s) return NaN;
+  const p=s.trim().split(':');
+  if(p.length!==2) return NaN;
+  const m=parseInt(p[0],10),sec=parseInt(p[1],10);
+  if(isNaN(m)||isNaN(sec)||sec<0||sec>59) return NaN;
+  return m*60+sec;
+}
+function fmtPace(s){ return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+function fmtHM(s){ const h=Math.floor(s/3600),m=Math.floor((s%3600)/60); return h?h+'h '+m+'m':m+'m'; }
+function fmtDur(s){ const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60; return h?h+':'+String(m).padStart(2,'0')+':'+String(ss).padStart(2,'0'):m+':'+String(ss).padStart(2,'0'); }
+
+function loadZones(){
+  try{ const d=JSON.parse(localStorage.getItem(ZONE_KEY)||'{}'); if(d.hr&&d.hr.length===5) ZC.hr=d.hr; if(d.pace&&d.pace.length===6) ZC.pace=d.pace; }catch(e){}
+  ZC.hr.forEach((v,i)=>{ const el=document.getElementById('hrZ'+(i+1)); if(el) el.value=v; });
+  ZC.pace.forEach((v,i)=>{ const el=document.getElementById('pZ'+(i+1)); if(el) el.value=fmtPace(v); });
+}
+function saveZones(){
+  // Pulszonerna beraknas i synken (Olympiatoppen) och ar bara referens har.
+  // Endast fartzonerna (Z1-Z6 ovre grans) redigeras.
+  let ok=true; const pace=[];
+  for(let i=1;i<=6;i++){ const el=document.getElementById('pZ'+i),v=parsePace(el.value); if(isNaN(v)||v<60||v>900){el.classList.add('err');ok=false;}else{el.classList.remove('err');pace.push(v);} }
+  if(!ok) return;
+  for(let i=1;i<pace.length;i++) if(pace[i]>=pace[i-1]){document.getElementById('pZ'+(i+1)).classList.add('err');ok=false;}
+  if(!ok) return;
+  ZC.pace=pace; localStorage.setItem(ZONE_KEY,JSON.stringify(ZC));
+  const fb=document.getElementById('saveOk'); fb.classList.add('show'); setTimeout(()=>fb.classList.remove('show'),2500);
+  renderCal(); renderWeekSummary();
+}
+function resetZones(){
+  ZC={hr:[...ZONE_DEF.hr],pace:[...ZONE_DEF.pace]}; localStorage.removeItem(ZONE_KEY); loadZones(); renderCal(); renderWeekSummary();
+}
+
+// ══════════════════════════════════
+// STATE
+// ══════════════════════════════════
+let DATA={activities:[],health:[],blocks:[]};
+let calOffset=0;
+const CH={};
+const HR_COLORS=['#64748b','#3b82f6','#22c55e','#f59e0b','#f97316','#ef4444'];
+const PC_COLORS=['#64748b','#3b82f6','#22c55e','#f59e0b','#f97316','#ef4444','#c026d3'];
+const DAYS=['Man','Tis','Ons','Tor','Fre','Lor','Son'];
+
+// ══════════════════════════════════
+// MOCK DATA (90 days)
+// ══════════════════════════════════
+function mockData(){
+  const acts=[],health=[],blocks=[];
+  const today=new Date();
+  const sched=[
+    {type:'easy',dist:10,pace:310,sport:'running'},
+    {type:'interval',dist:12,pace:240,sport:'running'},
+    {type:'rest',dist:0,pace:0,sport:'rest'},
+    {type:'tempo',dist:14,pace:275,sport:'running'},
+    {type:'easy',dist:8,pace:320,sport:'running'},
+    {type:'long',dist:22,pace:315,sport:'running'},
+    {type:'rest',dist:0,pace:0,sport:'rest'}
+  ];
+  let actId=1;
+  for(let i=89;i>=0;i--){
+    const d=new Date(today); d.setDate(today.getDate()-i);
+    const ds=ymd(d);
+    const prog=(89-i)/89;
+    health.push({date:ds,hrv_rmssd:Math.round((52+prog*6+(Math.random()-.5)*14)*10)/10,sleep_score:Math.min(100,Math.max(40,Math.round(72+prog*8+(Math.random()-.5)*12))),resting_hr:Math.round(48-prog*4+(Math.random()-.5)*3)});
+    const dow=(d.getDay()+6)%7;
+    const sc=sched[dow];
+    if(!sc.dist) continue;
+    const pace=sc.pace+Math.round((Math.random()-.5)*20);
+    const dist=sc.dist+(Math.random()-.5)*2;
+    const dur=Math.round(dist*pace);
+    const avgHr=Math.round((sc.type==='interval'?162:sc.type==='tempo'?155:142)-(prog*8)+(Math.random()-.5)*4);
+    let z1,z2,z3,z4,z5,pz1,pz2,pz3,pz4,pz5,pz6;
+    if(sc.type==='easy'||sc.type==='long'){z1=Math.round(dur*.08);z2=Math.round(dur*.70);z3=Math.round(dur*.15);z4=Math.round(dur*.05);z5=Math.round(dur*.02);pz1=Math.round(dur*.12);pz2=Math.round(dur*.65);pz3=Math.round(dur*.16);pz4=Math.round(dur*.05);pz5=Math.round(dur*.015);pz6=Math.round(dur*.005);}
+    else if(sc.type==='tempo'){z1=Math.round(dur*.06);z2=Math.round(dur*.35);z3=Math.round(dur*.30);z4=Math.round(dur*.25);z5=Math.round(dur*.04);pz1=Math.round(dur*.08);pz2=Math.round(dur*.26);pz3=Math.round(dur*.32);pz4=Math.round(dur*.24);pz5=Math.round(dur*.07);pz6=Math.round(dur*.03);}
+    else{z1=Math.round(dur*.10);z2=Math.round(dur*.25);z3=Math.round(dur*.20);z4=Math.round(dur*.30);z5=Math.round(dur*.15);pz1=Math.round(dur*.10);pz2=Math.round(dur*.18);pz3=Math.round(dur*.16);pz4=Math.round(dur*.24);pz5=Math.round(dur*.20);pz6=Math.round(dur*.12);}
+    const p10=Math.round(pace/10)*10;
+    const li=Math.round(dist*(sc.type==='interval'?1.6:sc.type==='tempo'?1.3:1.0)*(1+prog*.1)*10)/10;
+
+    acts.push({id:actId,date:ds,distance_km:Math.round(dist*10)/10,duration_seconds:dur,avg_hr:avgHr,zone_1_sec:z1,zone_2_sec:z2,zone_3_sec:z3,zone_4_sec:z4,zone_5_sec:z5,pace_zone_1_sec:pz1,pace_zone_2_sec:pz2,pace_zone_3_sec:pz3,pace_zone_4_sec:pz4,pace_zone_5_sec:pz5,pace_zone_6_sec:pz6,load_index:li,pace_10s:p10,stable_hr:avgHr-4+Math.round(Math.random()*6),sport_type:sc.sport,is_treadmill: dow===2 && sc.sport==='running'}); // onsdagspass = mock loopband
+
+    // Generate realistic blocks for this activity
+    // Each block = a stable pace segment, 3-8 min long
+    if(sc.sport==='running'){
+      const blockPaces = sc.type==='easy'||sc.type==='long'
+        ? [p10-10, p10, p10+10, p10, p10+20]
+        : sc.type==='tempo'
+        ? [p10+30, p10, p10-10, p10, p10-10, p10+20]
+        : [p10+40, p10-30, p10+40, p10-30, p10-30, p10+40]; // intervals
+
+      blockPaces.forEach((bp,bi)=>{
+        const bp10 = Math.round(bp/10)*10;
+        const blockDur = 180 + Math.round(Math.random()*300); // 3-8 min
+        const blockDist = Math.round(blockDur/bp10*1000)/1000;
+        // HR at this block pace, improving over time
+        const baseHrForPace = 100 + Math.round((bp10-180)*(-0.18)) - Math.round(prog*8);
+        const blockHr = Math.max(100, Math.min(185, baseHrForPace + Math.round((Math.random()-.5)*5)));
+        // Running Dynamics: faster pace -> higher cadence, lower GCT, lower vertical osc
+        // Later blocks in a session show fatigue drift (higher GCT, higher vosc)
+        const speedFactor = (330 - bp10) / 150; // 0 at slow, ~1 at fast
+        const fatigueDrift = bi / blockPaces.length; // 0 at start, ~1 at end
+        const cadence = Math.round(168 + speedFactor*14 - fatigueDrift*3 + (Math.random()-.5)*2);
+        const gct = Math.round(255 - speedFactor*45 + fatigueDrift*12 + (Math.random()-.5)*6);
+        const vosc = Math.round((85 - speedFactor*10 + fatigueDrift*7 + (Math.random()-.5)*3)*10)/10;
+        const vratio = Math.round((vosc / (1000/cadence*bp10/1000*100/100)) * 100) / 100; // approximation
+        blocks.push({activity_id:actId, date:ds, pace_10s:bp10, avg_hr:blockHr, duration_sec:blockDur, distance_km:blockDist,
+          cadence_spm:cadence, ground_contact_ms:gct, vertical_osc_mm:vosc, vertical_ratio: Math.round((vosc/((1000/(cadence/60))*(1000/bp10)/10)*100)*100)/100,
+          block_order: bi, seconds_from_start: blockPaces.slice(0,bi).reduce((s)=>s+300,0)});
+      });
+    }
+    actId++;
+  }
+  return {activities:acts,health,blocks};
+}
+
+// ══════════════════════════════════
+// CHART HELPERS
+// ══════════════════════════════════
+Chart.defaults.color='#5a5a70';
+Chart.defaults.font.family='Segoe UI,system-ui,sans-serif';
+Chart.defaults.font.size=11;
+const grd={color:'rgba(255,255,255,0.05)',tickColor:'transparent'};
+const tck={padding:7};
+function kill(k){if(CH[k]){CH[k].destroy();delete CH[k];}}
+function zBar(id,vals,colors){
+  const el=document.getElementById(id); if(!el) return;
+  const tot=vals.reduce((a,b)=>a+b,0)||1; el.innerHTML='';
+  vals.forEach((v,i)=>{const div=document.createElement('div');div.style.cssText='width:'+(v/tot*100).toFixed(1)+'%;background:'+colors[i]+';';el.appendChild(div);});
+}
+
+// ══════════════════════════════════
+// PAGE 0: CALENDAR
+// ══════════════════════════════════
+function weekStart(offset){
+  const d=new Date(); const dow=(d.getDay()+6)%7;
+  d.setDate(d.getDate()-dow+offset*7); d.setHours(0,0,0,0); return d;
+}
+function calShift(n){ calOffset+=n; renderCal(); renderWeekSummary(); }
+
+// Lokalt datum YYYY-MM-DD (INTE toISOString som ger UTC -> forskjuter dygn i +tidszoner)
+function ymd(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+// Alla loop-subtyper med tillforlitlig fart (running, trail, track, street...) utom loopband/inomhus
+function isRun(st){ return /running/.test(st||'') && st!=='treadmill_running' && st!=='indoor_running' && st!=='virtual_run'; }
+// Bredare: all loopning INKL loopband/inomhus - anvands for senbelastning (bandet ger fart via footpod/band)
+function isRunAny(st){ return /running/.test(st||'') || st==='virtual_run'; }
+
+function fmtD(d){ return d.getDate()+'/'+(d.getMonth()+1); }
+function calPeriodN(){ return parseInt((document.getElementById('calPeriod')||{}).value||'1'); }
+function hexA(hex,a){ const h=hex.replace('#',''); const n=parseInt(h.length===3?h.split('').map(c=>c+c).join(''):h,16); return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')'; }
+function aSportShort(s){ s=s||''; if(/running/.test(s))return 'Löp'; if(/cycl/.test(s))return 'Cykel'; if(/ski/.test(s))return 'Skid'; if(/swim/.test(s))return 'Sim'; if(/strength/.test(s))return 'Styrka'; if(/walk|hik/.test(s))return 'Gång'; return 'Träning'; }
+function sportMatch(a,sport){ const s=a.sport_type||''; if(sport==='running')return /running/.test(s); if(sport==='cycling')return /cycl/.test(s); if(sport==='skiing')return /ski/.test(s); if(sport==='other')return !/running|cycl|ski/.test(s); return true; }
+// Passfarg = zonfarg: hogsta zon >=Z3 med >5 min, annars dominerande zon. Lopning->fartzoner, loopband/annat->pulszoner.
+function passColor(a){
+  const usePace=isRun(a.sport_type), colors=usePace?PC_COLORS:HR_COLORS, nz=usePace?7:6, secs=[];
+  for(let z=0;z<nz;z++) secs.push(usePace?(a['pace_zone_'+z+'_sec']||0):(a['zone_'+z+'_sec']||0));
+  for(let z=nz-1;z>=3;z--) if(secs[z]>300) return colors[z];
+  let dom=0,mx=-1; for(let z=0;z<nz;z++) if(secs[z]>mx){mx=secs[z];dom=z;}
+  return colors[dom];
+}
+function passLong(a){ return (a.duration_seconds||0)>7200 || (isRunAny(a.sport_type)&&(a.distance_km||0)>20); }
+
+// Statisk topprad: dagens senaste HRV/somn + senaste pass
+function renderTopBar(){
+  const set=(id,v)=>{ const e=document.getElementById(id); if(e) e.innerHTML=v; };
+  const H=DATA.health.slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  const last=H[H.length-1]||{};
+  const hrvArr=H.filter(h=>h.hrv_rmssd!=null);
+  const mean=arr=>arr.length?arr.reduce((s,v)=>s+v,0)/arr.length:null;
+  const lastHrv=last.hrv_rmssd!=null?+last.hrv_rmssd:null;
+  const h7=mean(hrvArr.slice(-7).map(h=>+h.hrv_rmssd)), h90=mean(hrvArr.slice(-90).map(h=>+h.hrv_rmssd));
+  const dl=(v,b)=>(v!=null&&b!=null)?((v-b>=0?'+':'')+Math.round(v-b)):'–';
+  set('tbHrv', lastHrv!=null?Math.round(lastHrv)+' <span style="font-size:12px;color:var(--muted)">ms</span>':'-');
+  set('tbHrvSub', h7!=null?('7d '+Math.round(h7)+' ms · vs 90d: natt '+dl(lastHrv,h90)+', 7d '+dl(h7,h90)):'-');
+  set('tbSleep', last.sleep_score!=null?last.sleep_score:'-');
+  const sl=hrvArr.length?H.filter(h=>h.sleep_score!=null).slice(-7).map(h=>h.sleep_score):[];
+  set('tbSleepSub', sl.length?('7d '+Math.round(mean(sl))):'');
+  set('tbSleepH', last.sleep_total_min!=null?fmtHM(last.sleep_total_min*60):'-');
+  const acts=DATA.activities.slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  const lp=acts[acts.length-1];
+  set('tbLastPass', lp?(aSportShort(lp.sport_type)+' '+(lp.distance_km||0)+' km · '+fmtHM(lp.duration_seconds||0)+'<br><span style="font-size:10px;color:var(--muted)">'+lp.date+'</span>'):'-');
+}
+
+function renderCal(){
+  const N=calPeriodN(), sport=document.getElementById('sportFilter').value, byDate={};
+  DATA.activities.forEach(a=>{ if(sport!=='all'&&!sportMatch(a,sport)) return; (byDate[a.date]=byDate[a.date]||[]).push(a); });
+  const today=new Date(); today.setHours(0,0,0,0);
+  const grid=document.getElementById('calGrid'); grid.innerHTML='';
+  const newest=weekStart(calOffset), oldest=weekStart(calOffset-(N-1)), ne=new Date(newest); ne.setDate(newest.getDate()+6);
+  document.getElementById('calLabel').textContent=fmtD(oldest)+' – '+fmtD(ne);
+  DAYS.forEach(d=>{ const el=document.createElement('div'); el.style.cssText='font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);text-align:center;padding:2px 0'; el.textContent=d; grid.appendChild(el); });
+  for(let wk=N-1; wk>=0; wk--){   // aldsta veckan overst, nyaste nederst
+    const ws=weekStart(calOffset-wk);
+    for(let i=0;i<7;i++){
+      const day=new Date(ws); day.setDate(ws.getDate()+i);
+      const ds=ymd(day), isT=day.getTime()===today.getTime();
+      const div=document.createElement('div'); div.className='cal-day'+(isT?' today':'');
+      let h='<div class="cal-day-date">'+day.getDate()+'/'+(day.getMonth()+1)+'</div>';
+      (byDate[ds]||[]).forEach(a=>{
+        const col=passColor(a), bang=passLong(a)?' <b style="color:var(--text)">!</b>':'';
+        h+='<div class="cal-activity" style="background:'+hexA(col,.16)+';border-color:'+hexA(col,.55)+'"><span class="act-km" style="color:'+col+'">'+aSportShort(a.sport_type)+' '+(a.distance_km||0)+'km'+bang+'</span>'+fmtHM(a.duration_seconds||0)+'</div>';
+      });
+      div.innerHTML=h; grid.appendChild(div);
+    }
+  }
+}
+
+let sumZoneType = 'hr';
+
+function setZoneType(type){
+  sumZoneType = type;
+  document.getElementById('ztHR').classList.toggle('active', type==='hr');
+  document.getElementById('ztPace').classList.toggle('active', type==='pace');
+  renderWeekSummary();
+}
+
+function updateZoneToggle(){
+  const sport = document.getElementById('sportFilter').value;
+  const paceBtn = document.getElementById('ztPace');
+  const paceAllowed = sport === 'all' || sport === 'running';
+  paceBtn.disabled = !paceAllowed;
+  paceBtn.style.opacity = paceAllowed ? '1' : '0.35';
+  paceBtn.style.cursor = paceAllowed ? 'pointer' : 'not-allowed';
+  if(!paceAllowed && sumZoneType === 'pace') setZoneType('hr');
+}
+
+function renderWeekSummary(){
+  const weeks = calPeriodN();
+  const ws = weekStart(calOffset);
+  const endDate = new Date(ws); endDate.setDate(ws.getDate() + 6); endDate.setHours(23,59,59);
+  const startDate = new Date(endDate); startDate.setDate(endDate.getDate() - weeks*7 + 1); startDate.setHours(0,0,0,0);
+
+  const sport = document.getElementById('sportFilter').value;
+  let wa = DATA.activities.filter(a => { const d=new Date(a.date); return d>=startDate && d<=endDate; });
+  if(sport !== 'all') wa = wa.filter(a => sportMatch(a, sport));
+
+  document.getElementById('wkN').textContent = wa.length || '0';
+  const ts = wa.reduce((s,a) => s+(a.duration_seconds||0), 0);
+  document.getElementById('wkT').textContent = ts ? fmtHM(ts) : '0m';
+  const tk = wa.reduce((s,a) => s+(a.distance_km||0), 0);
+  document.getElementById('wkD').innerHTML = (Math.round(tk*10)/10)+'<span class="unt">km</span>';
+
+  // Halsosnitt for perioden + jamforelse mot 1-arssnitt
+  const yearAgo = new Date(endDate); yearAgo.setDate(yearAgo.getDate()-365);
+  const mean = a => a.length ? a.reduce((s,v)=>s+v,0)/a.length : null;
+  const pick = (from,f) => DATA.health.filter(h=>{const d=new Date(h.date+'T00:00:00'); return d>=from && d<=endDate;}).map(f).filter(v=>v!=null);
+  const healthStat = (valId,yId,f,unit,dec) => {
+    const pv=mean(pick(startDate,f)), yv=mean(pick(yearAgo,f));
+    const el=document.getElementById(valId), ye=document.getElementById(yId);
+    const r=v=>dec?Math.round(v*10)/10:Math.round(v);
+    if(pv==null){ el.innerHTML='-'; ye.textContent=''; return; }
+    el.innerHTML = r(pv)+(unit?'<span class="unt">'+unit+'</span>':'');
+    if(yv!=null){ const d=pv-yv, col=Math.abs(d)<(dec?0.2:1)?'var(--muted)':(d>=0?'var(--green)':'#ef4444');
+      ye.innerHTML='<span style="color:'+col+'">'+(d>=0?'+':'')+(dec?Math.round(d*10)/10:Math.round(d))+' vs 1år</span>'; }
+    else ye.textContent='';
+  };
+  healthStat('wkHrv','wkHrvY', h=>h.hrv_rmssd!=null?+h.hrv_rmssd:null, ' ms', false);
+  healthStat('wkSleep','wkSleepY', h=>h.sleep_score!=null?h.sleep_score:null, '', false);
+  healthStat('wkSleepH','wkSleepHY', h=>h.sleep_total_min!=null?h.sleep_total_min/60:null, ' h', true);
+  const lbl=document.getElementById('sumPeriodLbl'); if(lbl) lbl.textContent=weeks+' v · '+fmtD(startDate)+'–'+fmtD(endDate);
+
+  let keys, colors, labels, src;
+  if(sumZoneType === 'pace'){
+    // Fartzoner Z0-Z6: endast löppass oavsett sport-filter
+    src    = wa.filter(a => isRun(a.sport_type));
+    keys   = PACE_ZONE_KEYS;
+    colors = PC_COLORS;
+    labels = PACE_ZONE_LABELS;
+  } else {
+    src    = wa;
+    keys   = HR_ZONE_KEYS;
+    colors = HR_COLORS;
+    labels = HR_ZONE_LABELS;
+  }
+
+  const zt = keys.map(k => src.reduce((s,a) => s+(a[k]||0), 0));
+  zBar('wkZoneBar', zt, colors);
+
+  const leg = document.getElementById('wkLegend');
+  leg.innerHTML = labels.map((l,i) => '<span style="color:'+colors[i]+'">&#9679; '+l+'</span>').join('');
+
+  kill('wkZ');
+  const ctx = document.getElementById('wkZoneChart').getContext('2d');
+  CH.wkZ = new Chart(ctx, {
+    type:'bar',
+    data:{ labels, datasets:[{data:zt.map(s=>Math.round(s/60)), backgroundColor:colors, borderRadius:5, borderSkipped:false}] },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>c.raw+' min'}}},
+      scales:{x:{grid:grd,ticks:{...tck,maxRotation:30,minRotation:20}}, y:{grid:grd,ticks:{...tck,callback:v=>v+'m'}}}
+    }
+  });
+  renderTendonPanel();
+}
+
+// ══════════════════════════════════
+// PAGE 1: AE
+// ══════════════════════════════════
+function fillActSel(id){
+  const sel=document.getElementById(id); sel.innerHTML='';
+  DATA.activities.slice().reverse().forEach((a,i)=>{const o=document.createElement('option');o.value=i;o.textContent=a.date+' - '+a.distance_km+' km';sel.appendChild(o);});
+}
+function fillPaceSel(){
+  const sel=document.getElementById('aePaceSel'); sel.innerHTML='';
+  // Build list of pace options from blocks (all unique 10s intervals with enough data)
+  const freq={};
+  DATA.blocks.forEach(b=>freq[b.pace_10s]=(freq[b.pace_10s]||0)+1);
+  // Fallback to activities if no blocks
+  if(!Object.keys(freq).length) DATA.activities.forEach(a=>freq[a.pace_10s]=(freq[a.pace_10s]||0)+1);
+  Object.keys(freq).map(Number).sort((a,b)=>a-b).forEach(p=>{const o=document.createElement('option');o.value=p;o.textContent=fmtPace(p)+' min/km';sel.appendChild(o);});
+  const top=Object.entries(freq).sort((a,b)=>b[1]-a[1])[0]; if(top) sel.value=top[0];
+}
+
+// Graf A: alla block för valt pass, scatter puls vs fart
+function renderAE(){
+  const sel=document.getElementById('aeActSel');
+  const idx=DATA.activities.length-1-parseInt(sel.value||0);
+  const a=DATA.activities[idx]; if(!a) return;
+
+  // Hämta blocks för detta pass
+  const passBlocks = DATA.blocks.filter(b=>b.activity_id===a.id);
+
+  let pts;
+  if(passBlocks.length > 0){
+    pts = passBlocks.map(b=>({x:b.pace_10s, y:b.avg_hr, dur:b.duration_sec}));
+  } else {
+    // Fallback: simulera från stable_hr
+    const base=a.stable_hr||a.avg_hr, bp=a.pace_10s;
+    pts=[];
+    for(let p=bp-40;p<=bp+50;p+=10) pts.push({x:p,y:Math.round(base+(bp-p)*.3+(Math.random()-.5)*3),dur:300});
+  }
+
+  kill('aePH');
+  const ctx=document.getElementById('aePHchart').getContext('2d');
+  CH.aePH=new Chart(ctx,{
+    type:'scatter',
+    data:{datasets:[{
+      data:pts,
+      backgroundColor:'rgba(249,56,34,.7)',
+      pointRadius: pts.map(p=>Math.max(4, Math.min(12, Math.round(p.dur/60)))),
+      pointHoverRadius:10
+    }]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{
+        label:c=>`${fmtPace(c.raw.x)} min/km - ${c.raw.y} bpm (${Math.round((c.raw.dur||0)/60)} min)`
+      }}},
+      scales:{
+        x:{grid:grd,ticks:{...tck,callback:v=>fmtPace(v)},title:{display:true,text:'Fart (min/km)',color:'#5a5a70'}},
+        y:{grid:grd,ticks:tck,title:{display:true,text:'Puls (bpm)',color:'#5a5a70'}}
+      }}
+  });
+  renderAETrend();
+}
+
+// Graf B: veckogenomsnitt per 10s-intervall vid vald referensfart
+function renderAETrend(){
+  const tp=parseInt(document.getElementById('aePaceSel').value||300);
+
+  // Gruppera blocks per vecka, filtrera på fart +-15s
+  const weekMap={};
+  const src = DATA.blocks.length > 0
+    ? DATA.blocks.filter(b => {
+        const act = DATA.activities.find(a => a.id === b.activity_id);
+        return act && isRun(act.sport_type);
+      })
+    : DATA.activities
+        .filter(a => isRun(a.sport_type))
+        .map(a=>({pace_10s:a.pace_10s, avg_hr:a.stable_hr||a.avg_hr, date:a.date, duration_sec:a.duration_seconds}));
+
+  src.filter(b=>Math.abs(b.pace_10s-tp)<=15).forEach(b=>{
+    // Veckonyckel: ISO-vecka (måndag)
+    const d=new Date(b.date);
+    const dow=(d.getDay()+6)%7;
+    const mon=new Date(d); mon.setDate(d.getDate()-dow);
+    const wk=ymd(mon);
+    if(!weekMap[wk]) weekMap[wk]={hrSum:0,durSum:0,count:0};
+    // Viktad snittning på duration
+    const dur=b.duration_sec||60;
+    weekMap[wk].hrSum += b.avg_hr*dur;
+    weekMap[wk].durSum += dur;
+    weekMap[wk].count++;
+  });
+
+  const pts = Object.entries(weekMap)
+    .sort((a,b)=>a[0].localeCompare(b[0]))
+    .filter(([,v])=>v.count>=1)
+    .map(([wk,v])=>({
+      x: wk.slice(5), // MM-DD
+      y: Math.round(v.hrSum/v.durSum)  // viktad snittpuls
+    }));
+
+  // AE-kvot per vecka: (m/s) / (snittpuls/100)
+  const aePts = pts.map(p=>({
+    x: p.x,
+    y: Math.round((1000/tp)/(p.y/100)*1000)/1000
+  }));
+
+  kill('aeT');
+  const ctx=document.getElementById('aeTrendChart').getContext('2d');
+  CH.aeT=new Chart(ctx,{
+    type:'line',
+    data:{datasets:[{
+      data:aePts,
+      borderColor:'#a78bfa',
+      backgroundColor:'rgba(167,139,250,.1)',
+      tension:.35,fill:true,
+      pointRadius:5,
+      pointBackgroundColor:'#a78bfa'
+    }]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{
+        label:c=>`AE: ${c.raw.y} | Vecka: ${c.raw.x}`
+      }}},
+      scales:{
+        x:{type:'category',grid:grd,ticks:{...tck,maxTicksLimit:8,autoSkip:true,maxRotation:45,minRotation:45,padding:6}},
+        y:{grid:grd,ticks:{...tck,callback:v=>v.toFixed(3)},title:{display:true,text:'AE-kvot (veckogenomsnitt)',color:'#5a5a70'}}
+      }}
+  });
+}
+
+// ══════════════════════════════════
+// PAGE 2: LOAD
+// ══════════════════════════════════
+// Traningsbelastning per pass: tid (min) x relativ intensitet (snittpuls / maxpuls).
+// Beror pa maxpuls-installningen, sa den rar sig nar du andrar maxpuls.
+function activityLoad(a){
+  if(a.load_index != null && a.avg_hr == null) return a.load_index; // fallback for data utan puls
+  if(!a.avg_hr || !a.duration_seconds) return 0;
+  return Math.round(a.duration_seconds/60 * (a.avg_hr / MAX_HR_APP) * 10)/10;
+}
+function renderLoad(){
+  const today=new Date(); const labels=[],raw=[];
+  const byDate={};
+  DATA.activities.forEach(a=>byDate[a.date]=(byDate[a.date]||0)+activityLoad(a));
+  for(let i=89;i>=0;i--){const d=new Date(today);d.setDate(today.getDate()-i);const ds=ymd(d);labels.push(ds.slice(5));raw.push(byDate[ds]||0);}
+  const roll=(data,n)=>data.map((_,i)=>{const sl=data.slice(Math.max(0,i-n+1),i+1);return Math.round(sl.reduce((a,b)=>a+b,0)/sl.length*10)/10;});
+  kill('load');
+  const ctx=document.getElementById('loadChart').getContext('2d');
+  CH.load=new Chart(ctx,{type:'bar',data:{labels,datasets:[
+    {type:'bar',data:raw,backgroundColor:'rgba(148,163,184,.2)',borderColor:'rgba(148,163,184,.35)',borderWidth:1,borderRadius:2,order:3},
+    {type:'line',data:roll(raw,7),borderColor:'#f97316',backgroundColor:'transparent',pointRadius:0,tension:.4,borderWidth:2.5,order:1},
+    {type:'line',data:roll(raw,42),borderColor:'#22c55e',backgroundColor:'transparent',pointRadius:0,tension:.4,borderWidth:2.5,order:2}
+  ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false}},
+    scales:{x:{grid:grd,ticks:{...tck,maxTicksLimit:10,maxRotation:0}},y:{grid:grd,ticks:tck,title:{display:true,text:'Load Index',color:'#5a5a70'}}}}});
+}
+
+// ══════════════════════════════════
+// PAGE 3: HRV
+// ══════════════════════════════════
+function renderHRV(){
+  const h=DATA.health; if(!h.length) return;
+  const hrv=h.map(d=>d.hrv_rmssd),slp=h.map(d=>d.sleep_score),labels=h.map(d=>d.date.slice(5));
+  const hrv7=hrv.map((_,i)=>{const sl=hrv.slice(Math.max(0,i-6),i+1);return Math.round(sl.reduce((a,b)=>a+b,0)/sl.length*10)/10;});
+  const last=h[h.length-1],avg7=hrv7[hrv7.length-1],diff=last.hrv_rmssd-avg7;
+  const badge=document.getElementById('hrvBadge'),txt=document.getElementById('hrvBadgeTxt');
+  badge.className='hrv-badge';
+  if(diff<-8){badge.classList.add('low');txt.textContent='HRV '+last.hrv_rmssd+' ms - '+Math.abs(Math.round(diff))+' ms under 7d-snitt. Vila rekommenderas.';}
+  else if(diff<-4){badge.classList.add('warn');txt.textContent='HRV '+last.hrv_rmssd+' ms - nagot under snitt. Bevaka belastningen.';}
+  else{badge.classList.add('ok');txt.textContent='HRV '+last.hrv_rmssd+' ms - normalt. Traningsstatus OK.';}
+  kill('hrv');
+  const ctx=document.getElementById('hrvChart').getContext('2d');
+  CH.hrv=new Chart(ctx,{type:'line',data:{labels,datasets:[
+    {data:hrv,borderColor:'#a78bfa',backgroundColor:'rgba(167,139,250,.08)',pointRadius:2,tension:.3,fill:true,yAxisID:'yH'},
+    {data:hrv7,borderColor:'rgba(239,68,68,.45)',backgroundColor:'transparent',borderDash:[5,4],pointRadius:0,tension:.4,yAxisID:'yH'},
+    {data:slp,borderColor:'#38bdf8',backgroundColor:'rgba(56,189,248,.07)',pointRadius:2,tension:.3,fill:true,yAxisID:'yS'}
+  ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false}},
+    scales:{x:{grid:grd,ticks:{...tck,maxTicksLimit:10,maxRotation:0}},
+      yH:{position:'left',grid:grd,ticks:{...tck,callback:v=>v+' ms'},title:{display:true,text:'HRV (ms)',color:'#a78bfa'}},
+      yS:{position:'right',grid:{display:false},ticks:tck,title:{display:true,text:'Somnpong',color:'#38bdf8'},min:0,max:100}}}});
+}
+
+// ══════════════════════════════════
+// PAGE 4: RUNNING DYNAMICS
+// ══════════════════════════════════
+function rdRunningBlocks(){
+  const excludeTM = document.getElementById('rdExcludeTreadmill').checked;
+  return DATA.blocks.filter(b=>{
+    const act = DATA.activities.find(a=>a.id===b.activity_id);
+    if(!act || !isRun(act.sport_type)) return false;
+    if(excludeTM && act.is_treadmill) return false;
+    return b.cadence_spm != null; // only blocks with dynamics data
+  });
+}
+
+function renderRunDyn(){
+  const blocks = rdRunningBlocks();
+  if(!blocks.length){
+    kill('rdCad'); kill('rdVr');
+    return;
+  }
+
+  // Group by pace zone (using ZC.pace boundaries)
+  const zoneLabels = PACE_ZONE_LABELS;
+  // p sek/km -> zon 0..6. Z0 = langsammare an Z1:s ovre grans (ZC.pace[0]).
+  function paceZoneIndex(p){
+    if(p >= ZC.pace[0]) return 0;                       // Z0 Aterhamtning
+    for(let i=0;i<ZC.pace.length;i++){ if(p >= ZC.pace[i]) return i; } // Z1..Z5
+    return ZC.pace.length;                              // Z6 (snabbare an sista gransen)
+  }
+
+  const buckets = zoneLabels.map(()=>({cad:[],vr:[]}));
+  blocks.forEach(b=>{
+    const zi = Math.min(paceZoneIndex(b.pace_10s), zoneLabels.length-1);
+    buckets[zi].cad.push(b.cadence_spm);
+    if(b.vertical_ratio) buckets[zi].vr.push(b.vertical_ratio);
+  });
+
+  const avg = arr => arr.length ? Math.round(arr.reduce((s,v)=>s+v,0)/arr.length*10)/10 : null;
+  const cadData = buckets.map(b=>avg(b.cad));
+  const vrData  = buckets.map(b=>avg(b.vr));
+
+  kill('rdCad');
+  const ctx1 = document.getElementById('rdCadenceChart').getContext('2d');
+  CH.rdCad = new Chart(ctx1,{
+    type:'bar',
+    data:{labels:zoneLabels, datasets:[{data:cadData, backgroundColor:PC_COLORS, borderRadius:5, borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw!=null?c.raw+' spm':'ingen data'}}},
+      scales:{x:{grid:grd,ticks:{...tck,maxRotation:35,minRotation:20}},y:{grid:grd,ticks:tck,title:{display:true,text:'Steg/min',color:'#5a5a70'}}}}
+  });
+
+  kill('rdVr');
+  const ctx2 = document.getElementById('rdVratioChart').getContext('2d');
+  CH.rdVr = new Chart(ctx2,{
+    type:'bar',
+    data:{labels:zoneLabels, datasets:[{data:vrData, backgroundColor:PC_COLORS, borderRadius:5, borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw!=null?c.raw+' %':'ingen data'}}},
+      scales:{x:{grid:grd,ticks:{...tck,maxRotation:35,minRotation:20}},y:{grid:grd,ticks:tck,title:{display:true,text:'Vertikal ratio (%)',color:'#5a5a70'}}}}
+  });
+}
+
+function fillRdActSel(){
+  const sel=document.getElementById('rdActSel'); if(!sel) return;
+  sel.innerHTML='';
+  const running = DATA.activities.filter(a=>isRun(a.sport_type));
+  running.slice().reverse().forEach((a)=>{
+    const hasBlocks = DATA.blocks.some(b=>b.activity_id===a.id && b.cadence_spm!=null);
+    if(!hasBlocks) return;
+    const o=document.createElement('option');
+    o.value=a.id; o.textContent=a.date+' - '+a.distance_km+' km'+(a.is_treadmill?' (loopband)':'');
+    sel.appendChild(o);
+  });
+}
+
+function renderRunDynDrift(){
+  const sel=document.getElementById('rdActSel'); if(!sel || !sel.value){ kill('rdDrift'); return; }
+  const actId = parseInt(sel.value);
+  const blocks = DATA.blocks.filter(b=>b.activity_id===actId && b.cadence_spm!=null)
+    .sort((a,b)=>(a.block_order||0)-(b.block_order||0));
+
+  kill('rdDrift');
+  if(!blocks.length) return;
+  const ctx = document.getElementById('rdDriftChart').getContext('2d');
+  CH.rdDrift = new Chart(ctx,{
+    type:'line',
+    data:{
+      labels: blocks.map((b,i)=>'Block '+(i+1)),
+      datasets:[
+        {data:blocks.map(b=>b.ground_contact_ms), borderColor:'#f97316', backgroundColor:'transparent', tension:.3, pointRadius:4, yAxisID:'yGCT'},
+        {data:blocks.map(b=>b.vertical_osc_mm), borderColor:'#38bdf8', backgroundColor:'transparent', tension:.3, pointRadius:4, yAxisID:'yVO'}
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{grid:grd,ticks:tck},
+        yGCT:{position:'left',grid:grd,ticks:{...tck,callback:v=>v+'ms'},title:{display:true,text:'Marktid (ms)',color:'#f97316'}},
+        yVO:{position:'right',grid:{display:false},ticks:{...tck,callback:v=>v+'mm'},title:{display:true,text:'Vert. osc (mm)',color:'#38bdf8'}}
+      }}
+  });
+}
+
+// ══════════════════════════════════
+// PAGE 6: ANALYS
+// ══════════════════════════════════
+const A_REP=[360,307,272,245,222,202,180]; // representativ sek/km per fartzon Z0..Z6
+let A_INIT=false, A_COLS=null, A_BANDS=[290,220]; // block-band: 4:50-5:00 och 3:40-3:50
+const A_GRAPHS=[['senb','load'],['hrv','sleep_h'],['blockA','blockB']]; // 3 linjegrafer (diagram 1-2 ar stapeldiagram)
+
+function mondayOf(dstr){ const d=new Date(dstr+'T00:00:00'); const dow=(d.getDay()+6)%7; d.setDate(d.getDate()-dow); d.setHours(0,0,0,0); return d; }
+function aBandLbl(p){ return fmtPace(p)+'-'+fmtPace(p+10); }
+function aBlockHr(w,p){ const b=w.blocks[p]; return b&&b.dur?Math.round(b.hr/b.dur):null; }
+function aWeekLabel(w){ const e=new Date(w.start.getTime()+6*864e5); const f=d=>d.getDate()+'/'+(d.getMonth()+1); return f(w.start)+'-'+f(e); }
+
+function aComputeWeeks(){
+  const wk={};
+  const W=(key,start)=>{ if(!wk[key]) wk[key]={key,start,train_s:0,run_km:0,longest:0,pz_s:Array(7).fill(0),hz_s:Array(6).fill(0),sleepArr:[],hrvArr:[],senb:0,load:0,blocks:{}}; return wk[key]; };
+  DATA.activities.forEach(a=>{ if(!a.date) return; const mon=mondayOf(a.date); const w=W(ymd(mon),mon);
+    w.train_s+=a.duration_seconds||0; w.load+=activityLoad(a);
+    for(let z=0;z<6;z++) w.hz_s[z]+=a['zone_'+z+'_sec']||0;            // puls: alla sporter med puls
+    if(isRunAny(a.sport_type)){ w.run_km+=a.distance_km||0; if((a.distance_km||0)>w.longest)w.longest=a.distance_km||0;
+      for(let z=0;z<7;z++) w.pz_s[z]+=a['pace_zone_'+z+'_sec']||0; w.senb+=calcTendonLoad(a); } });
+  DATA.health.forEach(h=>{ if(!h.date) return; const w=wk[ymd(mondayOf(h.date))]; if(!w)return;
+    if(h.sleep_total_min!=null)w.sleepArr.push(h.sleep_total_min/60); if(h.hrv_rmssd!=null)w.hrvArr.push(+h.hrv_rmssd); });
+  DATA.blocks.forEach(b=>{ if(!b.date||b.pace_10s==null)return; const w=wk[ymd(mondayOf(b.date))]; if(!w)return;
+    const p=b.pace_10s; w.blocks[p]=w.blocks[p]||{hr:0,dur:0}; w.blocks[p].hr+=(b.avg_hr||0)*(b.duration_sec||0); w.blocks[p].dur+=b.duration_sec||0; });
+  const avg=arr=>arr.length?arr.reduce((s,v)=>s+v,0)/arr.length:null;
+  return Object.values(wk).sort((a,b)=>a.key.localeCompare(b.key)).map(w=>{
+    w.train_h=Math.round(w.train_s/360)/10; w.run_km=Math.round(w.run_km*10)/10; w.longest=Math.round(w.longest*10)/10;
+    let pk=w.pz_s.map((s,z)=>s/A_REP[z]); const pt=pk.reduce((s,v)=>s+v,0)||1;
+    w.pz_pct=pk.map(k=>Math.round(k/pt*1000)/10); w.pz_km=pk.map(k=>Math.round(k*10)/10);
+    w.hz_min=w.hz_s.map(s=>Math.round(s/60)); const ht=w.hz_s.reduce((s,v)=>s+v,0)||1; w.hz_pct=w.hz_s.map(s=>Math.round(s/ht*1000)/10);
+    const sl=avg(w.sleepArr), hv=avg(w.hrvArr);
+    w.sleep_h=sl!=null?Math.round(sl*10)/10:null; w.hrv=hv!=null?Math.round(hv):null;
+    w.senb=Math.round(w.senb*10)/10; w.load=Math.round(w.load*10)/10; return w; });
+}
+
+function aMetrics(){
+  const M=[{key:'train_h',label:'Traningstim'},{key:'run_km',label:'Lop-km'},{key:'longest',label:'Langsta km'}];
+  for(let z=0;z<7;z++) M.push({key:'pz'+z+'_km',label:'Fart Z'+z+' km'});
+  for(let z=0;z<7;z++) M.push({key:'pz'+z+'_pct',label:'Fart Z'+z+' %'});
+  for(let z=0;z<6;z++) M.push({key:'hz'+z+'_min',label:'Puls Z'+z+' min'});
+  for(let z=0;z<6;z++) M.push({key:'hz'+z+'_pct',label:'Puls Z'+z+' %'});
+  M.push({key:'sleep_h',label:'Somn h'},{key:'hrv',label:'HRV'},{key:'senb',label:'Senbelastning'},{key:'load',label:'Load index'});
+  M.push({key:'blockA',label:'Block '+aBandLbl(A_BANDS[0])+' puls'},{key:'blockB',label:'Block '+aBandLbl(A_BANDS[1])+' puls'});
+  return M;
+}
+function aVal(w,key){
+  if(key==='blockA') return aBlockHr(w,A_BANDS[0]); if(key==='blockB') return aBlockHr(w,A_BANDS[1]);
+  let m;
+  if((m=key.match(/^pz(\d)_km$/))) return w.pz_km[+m[1]];
+  if((m=key.match(/^pz(\d)_pct$/))) return w.pz_pct[+m[1]];
+  if((m=key.match(/^hz(\d)_min$/))) return w.hz_min[+m[1]];
+  if((m=key.match(/^hz(\d)_pct$/))) return w.hz_pct[+m[1]];
+  return w[key];
+}
+function aFilteredWeeks(){
+  const from=document.getElementById('anFrom').value, to=document.getElementById('anTo').value;
+  return aComputeWeeks().filter(w=>(!from||w.key>=from)&&(!to||w.key<=to));
+}
+
+function renderAnalysis(){
+  if(!A_INIT) return;
+  const weeks=aFilteredWeeks(), M=aMetrics(), cols=M.filter(m=>A_COLS.has(m.key));
+  let html='<thead><tr><th>Vecka</th>'+cols.map(c=>'<th style="text-align:right;padding-left:14px">'+c.label+'</th>').join('')+'</tr></thead><tbody>';
+  weeks.forEach(w=>{ html+='<tr><td><span class="z-name">'+aWeekLabel(w)+'</span></td>'+
+    cols.map(c=>{ const v=aVal(w,c.key); return '<td style="text-align:right;padding-left:14px"><span class="z-name">'+(v==null?'-':v)+'</span></td>'; }).join('')+'</tr>'; });
+  document.getElementById('anTable').innerHTML=html+'</tbody>';
+  aRenderPaceZoneDiagram(weeks);
+  aRenderHrZoneDiagram(weeks);
+  aRenderCharts(weeks,M);
+}
+function aRenderCharts(weeks,M){
+  const labels=weeks.map(aWeekLabel), byKey={}; M.forEach(m=>byKey[m.key]=m);
+  A_GRAPHS.forEach((sel,gi)=>{ const cid='anChart'+gi; kill(cid); const el=document.getElementById(cid); if(!el)return;
+    const cols=['#f97316','#38bdf8'], ax=['yL','yR'], ds=[];
+    sel.forEach((key,si)=>{ if(!key||!byKey[key])return;
+      ds.push({label:byKey[key].label,data:weeks.map(w=>aVal(w,key)),borderColor:cols[si],backgroundColor:'transparent',yAxisID:ax[si],tension:.3,pointRadius:3,spanGaps:true,borderWidth:2}); });
+    CH[cid]=new Chart(el.getContext('2d'),{type:'line',data:{labels,datasets:ds},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{display:true,labels:{boxWidth:10,font:{size:10},color:'#9090a8'}}},
+      scales:{x:{grid:grd,ticks:{...tck,maxRotation:45,minRotation:30,font:{size:9}}},
+        yL:{position:'left',grid:grd,ticks:{...tck,color:'#f97316'}},
+        yR:{position:'right',grid:{display:false},ticks:{...tck,color:'#38bdf8'}}}}}); });
+}
+function aSportLabel(s){ return ({running:'Lopning',treadmill_running:'Lopband',track_running:'Banlopning',trail_running:'Trail',street_running:'Gatulopning',cycling:'Cykling',indoor_cycling:'Spinning',lap_swimming:'Simning',open_water_swimming:'Oppet vatten',hiking:'Vandring',walking:'Promenad',strength_training:'Styrka'})[s]||s||'-'; }
+function aZoneBarOpts(unit){ return {responsive:true,maintainAspectRatio:false,
+  plugins:{legend:{display:true,labels:{boxWidth:10,font:{size:9},color:'#9090a8'}},tooltip:{mode:'index',intersect:false}},
+  scales:{x:{stacked:true,grid:grd,ticks:{...tck,maxRotation:45,minRotation:30,font:{size:9}}},
+    y:{stacked:true,grid:grd,ticks:tck,title:{display:true,text:unit,color:'#5a5a70'}}}}; }
+function aRenderZoneTable(id, rows, nz, prefix){
+  let html='<thead><tr><th>Vecka</th>';
+  for(let z=0;z<nz;z++) html+='<th style="text-align:right;padding-left:12px">'+prefix+' Z'+z+'</th>';
+  html+='<th style="text-align:right;padding-left:12px">Tot</th></tr></thead><tbody>';
+  rows.forEach(r=>{ const tot=Math.round(r.zones.reduce((s,v)=>s+(v||0),0)*10)/10;
+    html+='<tr><td><span class="z-name">'+r.label+'</span></td>'+
+    r.zones.map(v=>'<td style="text-align:right;padding-left:12px"><span class="z-name">'+(v||0)+'</span></td>').join('')+
+    '<td style="text-align:right;padding-left:12px"><span class="z-name" style="color:var(--text);font-weight:600">'+tot+'</span></td></tr>'; });
+  document.getElementById(id).innerHTML=html+'</tbody>';
+}
+function aRenderPaceZoneDiagram(weeks){
+  const labels=weeks.map(aWeekLabel), datasets=[];
+  for(let z=0;z<7;z++) datasets.push({label:'Z'+z,data:weeks.map(w=>w.pz_km[z]),backgroundColor:PC_COLORS[z],stack:'s',borderWidth:0});
+  kill('anZonePace'); const el=document.getElementById('anZonePace');
+  if(el) CH.anZonePace=new Chart(el.getContext('2d'),{type:'bar',data:{labels,datasets},options:aZoneBarOpts('km')});
+  aRenderZoneTable('anZonePaceTbl', weeks.map(w=>({label:aWeekLabel(w),zones:w.pz_km})), 7, 'Fart');
+}
+function aRenderHrZoneDiagram(weeks){
+  const sel=document.getElementById('anHrSport'), sport=sel?sel.value:'all', byKey={};
+  DATA.activities.forEach(a=>{ if(!a.date)return; if(sport!=='all'&&a.sport_type!==sport)return;
+    const key=ymd(mondayOf(a.date)), arr=byKey[key]||(byKey[key]=Array(6).fill(0));
+    for(let z=0;z<6;z++) arr[z]+=(a['zone_'+z+'_sec']||0)/60; });
+  const rows=weeks.map(w=>({label:aWeekLabel(w),zones:(byKey[w.key]||Array(6).fill(0)).map(v=>Math.round(v))}));
+  const labels=weeks.map(aWeekLabel), datasets=[];
+  for(let z=0;z<6;z++) datasets.push({label:'Z'+z,data:rows.map(r=>r.zones[z]),backgroundColor:HR_COLORS[z],stack:'s',borderWidth:0});
+  kill('anZoneHr'); const el=document.getElementById('anZoneHr');
+  if(el) CH.anZoneHr=new Chart(el.getContext('2d'),{type:'bar',data:{labels,datasets},options:aZoneBarOpts('min')});
+  aRenderZoneTable('anZoneHrTbl', rows, 6, 'Puls');
+}
+function toggleColMenu(){ const m=document.getElementById('colMenu'); m.style.display=m.style.display==='none'?'block':'none'; }
+
+function initAnalysis(){
+  if(A_INIT){ renderAnalysis(); return; }
+  const weeks=aComputeWeeks(), M=aMetrics();
+  A_COLS=new Set(['train_h','run_km','longest','senb','load','sleep_h','hrv','blockA','blockB']);
+  // block-band-alternativ fran faktiska block
+  const seen={}; DATA.blocks.forEach(b=>{ if(b.pace_10s!=null) seen[b.pace_10s]=1; });
+  const bands=Object.keys(seen).map(Number).sort((a,b)=>a-b);
+  ['anBandA','anBandB'].forEach((id,i)=>{ const s=document.getElementById(id);
+    s.innerHTML=bands.map(p=>'<option value="'+p+'">'+aBandLbl(p)+'/km</option>').join('');
+    if(!bands.includes(A_BANDS[i])&&bands.length) A_BANDS[i]=bands[Math.min(i,bands.length-1)];
+    s.value=A_BANDS[i]; s.onchange=()=>{ A_BANDS[i]=+s.value; renderAnalysis(); }; });
+  if(weeks.length){ document.getElementById('anFrom').value=weeks[0].key; document.getElementById('anTo').value=weeks[weeks.length-1].key; }
+  const menu=document.getElementById('colMenu');
+  menu.innerHTML=M.map(m=>'<label style="display:flex;gap:7px;align-items:center;font-size:11px;color:var(--text);padding:3px 0;cursor:pointer"><input type="checkbox" data-k="'+m.key+'" '+(A_COLS.has(m.key)?'checked':'')+'> '+m.label+'</label>').join('');
+  menu.querySelectorAll('input').forEach(cb=>cb.onchange=()=>{ cb.checked?A_COLS.add(cb.dataset.k):A_COLS.delete(cb.dataset.k); renderAnalysis(); });
+  const optHtml='<option value="">(ingen)</option>'+M.map(m=>'<option value="'+m.key+'">'+m.label+'</option>').join('');
+  const zonePanels =
+    '<div style="margin-bottom:22px"><div style="font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--muted);margin-bottom:8px">DIAGRAM 1 &mdash; Lop-km per fartzon (Z0-Z6)</div>'
+    +'<div class="chart-wrap" style="height:200px"><canvas id="anZonePace"></canvas></div>'
+    +'<div style="overflow-x:auto;margin-top:10px"><table class="zone-tbl" id="anZonePaceTbl" style="white-space:nowrap"></table></div></div>'
+    +'<div style="margin-bottom:22px"><div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap"><span style="font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--muted)">DIAGRAM 2 &mdash; Tid per pulszon (Z0-Z5)</span>'
+    +'<select class="sum-sel" id="anHrSport" onchange="renderAnalysis()"></select></div>'
+    +'<div class="chart-wrap" style="height:200px"><canvas id="anZoneHr"></canvas></div>'
+    +'<div style="overflow-x:auto;margin-top:10px"><table class="zone-tbl" id="anZoneHrTbl" style="white-space:nowrap"></table></div></div>';
+  const linePanels = A_GRAPHS.map((sel,gi)=>
+    '<div style="margin-bottom:16px"><div style="display:flex;gap:8px;margin-bottom:6px;flex-wrap:wrap">'
+    +'<select class="sum-sel" id="anG'+gi+'L">'+optHtml+'</select><select class="sum-sel" id="anG'+gi+'R">'+optHtml+'</select></div>'
+    +'<div class="chart-wrap" style="height:150px"><canvas id="anChart'+gi+'"></canvas></div></div>').join('');
+  document.getElementById('anCharts').innerHTML=zonePanels+linePanels;
+  const sports={}; DATA.activities.forEach(a=>{ if(a.sport_type) sports[a.sport_type]=1; });
+  document.getElementById('anHrSport').innerHTML='<option value="all">Alla sporter</option>'+Object.keys(sports).sort().map(s=>'<option value="'+s+'">'+aSportLabel(s)+'</option>').join('');
+  A_GRAPHS.forEach((sel,gi)=>{ const L=document.getElementById('anG'+gi+'L'),R=document.getElementById('anG'+gi+'R');
+    L.value=sel[0]||''; R.value=sel[1]||''; L.onchange=()=>{A_GRAPHS[gi][0]=L.value; renderAnalysis();}; R.onchange=()=>{A_GRAPHS[gi][1]=R.value; renderAnalysis();}; });
+  A_INIT=true; renderAnalysis();
+}
+
+// ══════════════════════════════════
+// NAV
+// ══════════════════════════════════
+function showPage(idx){
+  document.querySelectorAll('.nav-btn').forEach((b,i)=>b.classList.toggle('active',i===idx));
+  document.querySelectorAll('.page').forEach((p,i)=>p.classList.toggle('active',i===idx));
+  const mob=document.getElementById('navMob'); if(mob) mob.value=idx;
+  if(idx===0){renderTopBar();renderCal();renderWeekSummary();}
+  if(idx===1) renderAE();
+  if(idx===2) renderLoad();
+  if(idx===3) renderHRV();
+  if(idx===4){renderRunDyn();fillRdActSel();renderRunDynDrift();}
+  if(idx===6){initAnalysis();}
+}
+
+// ══════════════════════════════════
+// SUPABASE
+// ══════════════════════════════════
+async function sbFetch(url,key){
+  const [ar,hr,br]=await Promise.all([
+    fetch(url+'/rest/v1/running_activities?select=*&order=date.asc&limit=5000',{headers:{apikey:key,Authorization:'Bearer '+key}}),
+    fetch(url+'/rest/v1/health_metrics?select=*&order=date.asc&limit=5000',{headers:{apikey:key,Authorization:'Bearer '+key}}),
+    fetch(url+'/rest/v1/activity_blocks?select=*&order=date.asc&limit=20000',{headers:{apikey:key,Authorization:'Bearer '+key}})
+  ]);
+  if(!ar.ok||!hr.ok) throw new Error('HTTP '+ar.status);
+  return {activities:await ar.json(),health:await hr.json(),blocks:br.ok?await br.json():[]};
+}
+async function connectSupabase(){
+  const url=(document.getElementById('cfgUrl').value||'').trim();
+  const key=(document.getElementById('cfgKey').value||'').trim();
+  if(!url||!key){alert('Fyll i URL och nyckel.');return;}
+  const btn=event.target; btn.textContent='Ansluter...'; btn.disabled=true;
+  try{const d=await sbFetch(url,key);applyData(d,'Supabase live - '+d.activities.length+' pass');alert('Ansluten. '+d.activities.length+' pass och '+d.blocks.length+' block laddade.');}
+  catch(e){alert('Fel: '+e.message);}
+  finally{btn.textContent='Anslut';btn.disabled=false;}
+}
+function applyData(d,label){
+  DATA=d;
+  document.getElementById('dbPill').classList.add('live');
+  document.getElementById('dbStatus').textContent=label;
+  fillActSel('aeActSel'); fillPaceSel();
+  renderTopBar(); renderCal(); renderWeekSummary();
+}
+
+// ══════════════════════════════════
+// INIT
+// ══════════════════════════════════
+(async function init(){
+  loadZones();
+  loadTLAnchors();
+  loadMaxHr();
+  if(SUPABASE_URL&&SUPABASE_KEY){
+    document.getElementById('dbStatus').textContent='Ansluter...';
+    try{const d=await sbFetch(SUPABASE_URL,SUPABASE_KEY);applyData(d,'Supabase live - '+d.activities.length+' pass');return;}
+    catch(e){console.warn('Supabase fallback:',e.message);document.getElementById('dbStatus').textContent='Anslutning misslyckades';}
+  }
+  DATA=mockData();
+  fillActSel('aeActSel'); fillPaceSel();
+  renderTopBar(); renderCal(); renderWeekSummary();
+})();
+</script>
+</body>
+</html>

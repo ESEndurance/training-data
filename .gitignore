@@ -1,0 +1,8 @@
+# Hemligheter och lokal data - ska ALDRIG upp till GitHub
+token/
+garmin/
+*.log
+sync*.out
+__pycache__/
+*.pyc
+.claude/
