@@ -2,8 +2,16 @@
 <html lang="sv">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
 <title>ES Endurance · MVP Dashboard</title>
+<link rel="manifest" href="manifest.webmanifest"/>
+<meta name="theme-color" content="#111117"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="ES Endurance"/>
+<link rel="apple-touch-icon" href="icon-180.png"/>
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -51,6 +59,81 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .cal-activity{background:rgba(249,56,34,.1);border:1px solid rgba(249,56,34,.22);border-radius:3px;padding:2px 4px;margin-bottom:2px;font-size:8px;line-height:1.35;color:var(--text)}
 .cal-activity .act-km{font-weight:700;color:var(--red);display:block}
 @media(max-width:500px){.cal-day{padding:4px;min-height:62px}.cal-day-date{font-size:12px}.cal-activity{font-size:8px}}
+/* Planerade pass */
+.cal-day{cursor:pointer;transition:border-color .15s}
+.cal-day:hover{border-color:var(--dim)}
+.cal-plan{border:1px dashed var(--dim);border-radius:3px;padding:2px 4px;margin-bottom:2px;font-size:8px;line-height:1.35;color:var(--dim);background:rgba(144,144,168,.06)}
+.cal-plan .pl-t{font-weight:700;display:block;color:var(--text)}
+.cal-plan.done{border-style:solid;border-color:rgba(34,197,94,.6);background:rgba(34,197,94,.08)}
+.cal-plan.done .pl-s{color:var(--green);font-weight:700}
+.cal-plan.missed{border-color:rgba(239,68,68,.55);background:rgba(239,68,68,.06)}
+.cal-plan.missed .pl-t{text-decoration:line-through;color:var(--dim)}
+.cal-plan.missed .pl-s{color:#ef4444;font-weight:700}
+.cal-plan.rest .pl-t{color:var(--dim)}
+.cal-hint{font-size:10px;color:var(--muted);margin-top:10px}
+.pm-back{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;align-items:center;justify-content:center;padding:16px}
+.pm-back.open{display:flex}
+.pm{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:20px 22px;width:100%;max-width:420px}
+.pm h3{font-size:13px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;margin-bottom:14px}
+.pm-row{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.pm-row label{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.pm-row .txt-input,.pm-row select{max-width:none;background:var(--s1);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:6px;font-size:13px;outline:none;width:100%;font-family:inherit}
+.pm-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pm-actual{font-size:11px;color:var(--dim);background:var(--s3);border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin-bottom:12px;line-height:1.5}
+.pm-btns{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.btn-del{background:transparent;border:1px solid rgba(239,68,68,.5);color:#ef4444;margin-right:auto}
+.sync-btn{background:var(--s3);border:1px solid var(--border);color:var(--dim);padding:6px 11px;border-radius:6px;font-size:11px;cursor:pointer;white-space:nowrap}
+.sync-btn:hover{border-color:var(--dim);color:var(--text)}
+.sync-btn.on{color:var(--green);border-color:rgba(34,197,94,.45)}
+.hs-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}
+.hs-stats .wk-stat{border-left:3px solid var(--red)}
+.hs-sub{font-size:11px;color:var(--dim);margin-top:3px}
+.hs-lead{font-size:11px;color:var(--dim);margin:-8px 0 12px;line-height:1.5}
+.hs-sel{background:var(--s3);border:1px solid var(--border);color:var(--text);padding:6px 11px;border-radius:6px;font-size:12px;outline:none;cursor:pointer}
+.hs-empty{height:230px;border:1px dashed var(--border);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;font-size:12px;color:var(--dim);line-height:1.6;padding:0 20px}
+.hs-tbl{width:100%;border-collapse:collapse;font-size:12px}
+.hs-tbl th{font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);text-align:left;padding:6px 8px;border-bottom:1px solid var(--border)}
+.hs-tbl td{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.04)}
+.hs-tbl .num{text-align:right;font-variant-numeric:tabular-nums}
+.hs-tbl tr.flag td{background:rgba(249,56,34,.08)}
+.hs-tbl tr.flag td:first-child{box-shadow:inset 3px 0 0 var(--red)}
+/* ── Mobilapp: flikrad i botten, säkra ytor och täta marginaler ── */
+.tabbar{display:none}
+.topbar{padding-top:calc(14px + env(safe-area-inset-top))}
+@media(max-width:640px){
+  html{-webkit-text-size-adjust:100%}
+  body{padding-bottom:calc(62px + env(safe-area-inset-bottom));overscroll-behavior-y:none}
+  .topbar{padding:calc(10px + env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) 10px max(14px,env(safe-area-inset-left))}
+  .logo{font-size:12px}.logo-sub{display:none}
+  .db-pill{font-size:10px;padding:4px 9px;max-width:55vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .nav-mobile{display:none!important}
+  .tabbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:300;background:var(--s1);border-top:1px solid var(--border);
+    padding:0 max(2px,env(safe-area-inset-left)) env(safe-area-inset-bottom) max(2px,env(safe-area-inset-right))}
+  .tab-btn{flex:1;min-width:0;height:58px;background:none;border:none;color:var(--muted);font-size:9px;font-weight:700;letter-spacing:.02em;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;-webkit-tap-highlight-color:transparent;font-family:inherit}
+  .tab-btn svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .tab-btn.active{color:var(--red)}
+  .page{padding:12px max(12px,env(safe-area-inset-right)) 12px max(12px,env(safe-area-inset-left))}
+  .card{padding:14px 13px;margin-bottom:12px;border-radius:9px;overflow-x:auto}
+  .grid2{gap:12px}
+  .week-stats{grid-template-columns:repeat(2,1fr)}
+  .hs-stats{grid-template-columns:repeat(2,1fr)}
+  .hs-stats .wk-stat .val{font-size:16px}
+  .wk-stat{padding:10px 11px}
+  /* 16px i fält hindrar iOS från att zooma in vid fokus */
+  input,select,textarea,.txt-input,.pm-row .txt-input,.pm-row select,.hs-sel,.cal-filter select{font-size:16px!important}
+  .cal-header{gap:8px}
+  .cal-filter{width:100%}
+  .cal-filter select,.cal-filter .sync-btn{flex:1;min-width:0;padding:8px 8px}
+  .cal-grid{gap:3px}
+  .cal-day{padding:3px 2px;border-radius:5px}
+  .btn{padding:11px 18px}
+  .cal-arrow{width:38px;height:38px}
+  .pm-back{align-items:flex-end;padding:0}
+  .pm{max-width:none;border-radius:14px 14px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));max-height:92vh;overflow-y:auto}
+  .legend{gap:8px 12px;flex-wrap:wrap}
+}
+.pm-err{color:#ef4444;font-size:11px;margin-bottom:10px;display:none}
 .week-summary{display:grid;grid-template-columns:1fr;gap:18px}
 .week-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .wk-stat{background:var(--s3);border:1px solid var(--border);border-radius:8px;padding:12px 15px}
@@ -155,6 +238,17 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
   </select>
 </div>
 
+<!-- Flikrad i botten (endast mobil) -->
+<nav class="tabbar" id="tabbar">
+  <button class="tab-btn active" data-idx="0" onclick="showPage(0)"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Kalender</button>
+  <button class="tab-btn" data-idx="1" onclick="showPage(1)"><svg viewBox="0 0 24 24"><path d="M3 12h4l2-6 4 12 2-6h6"/></svg>Fart</button>
+  <button class="tab-btn" data-idx="2" onclick="showPage(2)"><svg viewBox="0 0 24 24"><path d="M5 20V11M12 20V4M19 20v-6"/></svg>Last</button>
+  <button class="tab-btn" data-idx="3" onclick="showPage(3)"><svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>HRV</button>
+  <button class="tab-btn" data-idx="4" onclick="showPage(4)"><svg viewBox="0 0 24 24"><circle cx="14" cy="4.5" r="1.8"/><path d="M6 21l4-6-2-4 4-3 3 3h4M10 15l4 2v4"/></svg>Teknik</button>
+  <button class="tab-btn" data-idx="6" onclick="showPage(6)"><svg viewBox="0 0 24 24"><path d="M4 20V4M4 20h16M8 15l4-5 3 3 4-6"/></svg>Analys</button>
+  <button class="tab-btn" data-idx="5" onclick="showPage(5)"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>Inst.</button>
+</nav>
+
 <!-- PAGE 0: KALENDER -->
 <div class="page active" id="page-0">
   <!-- STATISK TOPPRAD: dagens senaste HRV/somn + senaste pass -->
@@ -188,7 +282,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
         <div class="cal-week-label" id="calLabel">-</div>
         <button class="cal-arrow" onclick="calShift(1)">&#9654;</button>
       </div>
-      <div class="cal-filter" style="display:flex;gap:8px">
+      <div class="cal-filter" style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="sync-btn" id="syncBtn" onclick="onSyncBtn()">Logga in för synk</button>
         <select id="calPeriod" onchange="renderCal();renderWeekSummary()">
           <option value="1">1 vecka</option>
           <option value="4">4 veckor</option>
@@ -204,6 +299,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       </div>
     </div>
     <div class="cal-grid" id="calGrid"></div>
+    <div class="cal-hint">Klicka på en dag för att planera ett pass. Streckad ram = planerat, grön = genomfört, röd = missat.</div>
   </div>
 
   <div class="card">
@@ -219,6 +315,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
         <div class="wk-stat"><div class="lbl">Snitt HRV</div><div class="val" id="wkHrv">-</div><div class="unt" id="wkHrvY" style="font-size:10px;margin-left:0"></div></div>
         <div class="wk-stat"><div class="lbl">Snitt somnpoang</div><div class="val" id="wkSleep">-</div><div class="unt" id="wkSleepY" style="font-size:10px;margin-left:0"></div></div>
         <div class="wk-stat"><div class="lbl">Snitt somn/natt</div><div class="val" id="wkSleepH">-</div><div class="unt" id="wkSleepHY" style="font-size:10px;margin-left:0"></div></div>
+        <div class="wk-stat" style="grid-column:1/-1"><div class="lbl">Plan genomförd</div><div class="val" id="wkPlan">-</div><div class="unt" id="wkPlanSub" style="font-size:10px;margin-left:0"></div></div>
       </div>
       <div>
         <div class="zone-toggle">
@@ -299,13 +396,128 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
     <span id="hrvBadgeTxt">Laddar...</span>
   </div>
   <div class="card">
-    <div class="card-title">HRV (RMSSD) &amp; Somnkvalitet - 90 dagar</div>
-    <div class="chart-wrap" style="height:290px"><canvas id="hrvChart"></canvas></div>
-    <div class="legend" style="margin-top:10px">
-      <span style="color:#a78bfa">&#9679; HRV RMSSD (ms)</span>
-      <span style="color:#38bdf8">&#9679; Somnpong</span>
-      <span style="color:rgba(239,68,68,.5)">- - 7d HRV-snitt</span>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+      <div class="card-title" style="margin:0">Återhämtning i siffror</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:10px;color:var(--muted)" id="hsPeriodLbl"></span>
+        <select id="hsPeriod" class="hs-sel" onchange="renderHRV()">
+          <option value="90">90 dagar</option>
+          <option value="180" selected>6 månader</option>
+          <option value="365">12 månader</option>
+          <option value="0">Allt</option>
+        </select>
+      </div>
     </div>
+    <div class="hs-stats">
+      <div class="wk-stat"><div class="lbl">HRV, 7 dagars snitt</div><div class="val" id="hsHrv">-</div><div class="hs-sub" id="hsHrvSub"></div></div>
+      <div class="wk-stat"><div class="lbl">Vilopuls nu</div><div class="val" id="hsRhr">-</div><div class="hs-sub" id="hsRhrSub"></div></div>
+      <div class="wk-stat"><div class="lbl">Sömn, hela perioden</div><div class="val" id="hsSleep">-</div><div class="hs-sub" id="hsSleepSub"></div></div>
+      <div class="wk-stat"><div class="lbl">Svagaste natten</div><div class="val" id="hsWeak">-</div><div class="hs-sub" id="hsWeakSub"></div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">HRV mot din baslinje</div>
+    <p class="hs-lead">Baslinjen är ditt eget 60-dagars snitt. Det grå fältet är din normala variation (± 1 SD). Den röda linjen är sju dagars snitt.</p>
+    <div class="chart-wrap" style="height:280px"><canvas id="hsHrvChart"></canvas></div>
+    <div class="legend" style="margin-top:10px">
+      <span style="color:#F93822">&#9644; HRV, 7 dagars snitt</span>
+      <span style="color:var(--dim)">- - Din baslinje</span>
+      <span style="color:var(--dim)">&#9632; Normal variation</span>
+      <span style="color:var(--dim)">&#9679; Enskilda nätter</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Avvikelse mot baslinjen</div>
+    <p class="hs-lead">Sju dagars snitt mot baslinjen i procent. Noll är din baslinje, rött markerar perioder under den.</p>
+    <div class="chart-wrap" style="height:220px"><canvas id="hsDevChart"></canvas></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Träningsbelastning och HRV</div>
+    <p class="hs-lead">Staplarna är dagens träningsbelastning (minuter × pulsintensitet, alla sporter). Linjen är HRV som sju dagars snitt mot baslinjen. Följer HRV-fallen på tunga veckor, eller kommer de någon annanstans ifrån?</p>
+    <div class="chart-wrap" style="height:260px"><canvas id="hsLoadChart"></canvas></div>
+    <div class="legend" style="margin-top:10px">
+      <span style="color:var(--dim)">&#9632; Träningsbelastning per dag</span>
+      <span style="color:#f97316">&#9644; Belastning, 7 dagars snitt</span>
+      <span style="color:#F93822">&#9644; HRV, 7 dagars snitt</span>
+      <span style="color:var(--dim)">- - HRV-baslinje</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Stress och Body Battery</div>
+    <p class="hs-lead">Garmins stressnivå (snitt över dygnet) och hur högt Body Battery når. Hög stress och låg topp utan tung träning tyder på att belastningen kommer från annat håll.</p>
+    <div class="chart-wrap" style="height:240px"><canvas id="hsStressChart"></canvas></div>
+    <div class="legend" style="margin-top:10px">
+      <span style="color:#F93822">&#9644; Stress, 7 dagars snitt</span>
+      <span style="color:#38bdf8">&#9644; Body Battery-topp, 7 dagars snitt</span>
+      <span style="color:var(--dim)">&#9679; Enskilda dagar</span>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title">Vilopuls under sömn</div>
+      <div class="chart-wrap" style="height:230px"><canvas id="hsRhrChart"></canvas></div>
+      <div class="legend" style="margin-top:10px">
+        <span style="color:#F93822">&#9644; 7 dagars snitt</span>
+        <span style="color:var(--dim)">&#9679; Enskilda nätter</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Sömn per natt</div>
+      <div class="chart-wrap" style="height:230px"><canvas id="hsSleepChart"></canvas></div>
+      <div class="legend" style="margin-top:10px">
+        <span style="color:#F93822">&#9644; 7 dagars snitt</span>
+        <span style="color:var(--dim)">- - 7 timmar</span>
+        <span style="color:var(--dim)">&#9632; Enskilda nätter</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title">Sömnens sammansättning</div>
+      <p class="hs-lead">Djupsömn, REM och lätt sömn per natt. Linjen är andelen djup + REM, sju dagars snitt.</p>
+      <div class="chart-wrap" style="height:230px"><canvas id="hsStageChart"></canvas></div>
+      <div class="legend" style="margin-top:10px">
+        <span style="color:#3b82f6">&#9632; Djup</span>
+        <span style="color:#a78bfa">&#9632; REM</span>
+        <span style="color:var(--dim)">&#9632; Lätt</span>
+        <span style="color:#F93822">&#9644; Djup + REM, %</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Läggtider och regelbundenhet</div>
+      <p class="hs-lead" id="hsTimingLead">Varje stapel är en natt, från läggdags till uppvaknande.</p>
+      <div class="chart-wrap" id="hsTimingWrap" style="height:230px"><canvas id="hsTimingChart"></canvas></div>
+      <div class="hs-empty" id="hsTimingEmpty" style="display:none"></div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title">Veckomönstret</div>
+      <p class="hs-lead">HRV per veckodag mot ditt snitt i perioden. Dagen avser natten som slutade den morgonen.</p>
+      <div class="chart-wrap" style="height:230px"><canvas id="hsWeekChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Månad för månad</div>
+      <table class="hs-tbl">
+        <thead><tr><th>Månad</th><th class="num">Nätter</th><th class="num">HRV</th><th class="num">Vilopuls</th><th class="num">Sömn</th></tr></thead>
+        <tbody id="hsMonthBody"></tbody>
+      </table>
+      <p class="hs-lead" style="margin-top:8px">Rödmarkerad rad = periodens lägsta HRV-månad.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Samband: gårdagens belastning och nattens HRV</div>
+    <p class="hs-lead">Varje punkt är en natt. Vågrätt: träningsbelastningen dagen innan. Lodrätt: nattens HRV mot baslinjen. En linje som lutar nedåt betyder att hårda dagar sänker din HRV natten efter.</p>
+    <div class="chart-wrap" style="height:280px"><canvas id="hsScatterChart"></canvas></div>
+    <div class="hs-sub" id="hsScatterTxt" style="margin-top:10px;font-size:12px"></div>
   </div>
 </div>
 
@@ -464,6 +676,56 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
   <div class="card">
     <div class="card-title">Jamforelsegrafer (max 2 kurvor per graf)</div>
     <div id="anCharts"></div>
+  </div>
+</div>
+
+<!-- PLANERA PASS -->
+<div class="pm-back" id="planModal" onclick="if(event.target===this)closePlanModal()">
+  <div class="pm">
+    <h3 id="pmTitle">Planera pass</h3>
+    <div class="pm-actual" id="pmActual" style="display:none"></div>
+    <div class="pm-2">
+      <div class="pm-row"><label>Datum</label><input type="date" class="txt-input" id="pmDate"/></div>
+      <div class="pm-row"><label>Sport</label>
+        <select id="pmSport">
+          <option value="running">Löpning</option>
+          <option value="cycling">Cykling</option>
+          <option value="skiing">Skidåkning</option>
+          <option value="strength">Styrka</option>
+          <option value="other">Övrigt</option>
+        </select></div>
+    </div>
+    <div class="pm-row"><label>Typ</label>
+      <select id="pmType">
+        <option>Lugnt</option><option>Distans</option><option>Långpass</option><option>Tempo</option>
+        <option>Intervall</option><option>Backe</option><option>Tävling</option><option>Styrka</option>
+        <option>Vila</option><option>Annat</option>
+      </select></div>
+    <div class="pm-2">
+      <div class="pm-row"><label>Distans (km)</label><input type="number" min="0" step="0.1" class="txt-input" id="pmKm" placeholder="t.ex. 12"/></div>
+      <div class="pm-row"><label>Tid (min)</label><input type="number" min="0" step="1" class="txt-input" id="pmMin" placeholder="t.ex. 60"/></div>
+    </div>
+    <div class="pm-row"><label>Beskrivning</label><textarea class="txt-input" id="pmNote" rows="3" placeholder="t.ex. 6 x 1000 m i Z4, 2 min vila"></textarea></div>
+    <div class="pm-btns">
+      <button class="btn btn-del" id="pmDel" onclick="deletePlan()">Ta bort</button>
+      <button class="btn btn-ghost" onclick="closePlanModal()">Avbryt</button>
+      <button class="btn" onclick="savePlan()">Spara</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOGGA IN (synk av planerade pass) -->
+<div class="pm-back" id="loginModal" onclick="if(event.target===this)closeLogin()">
+  <div class="pm">
+    <h3>Logga in för synk</h3>
+    <p style="font-size:11px;color:var(--dim);margin-bottom:12px;line-height:1.5">Planerade pass sparas i Supabase och syns på alla dina enheter. Du behöver bara logga in en gång per webbläsare.</p>
+    <div class="pm-err" id="loginErr"></div>
+    <div class="pm-row"><label>E-post</label><input type="email" class="txt-input" id="loginEmail" autocomplete="username"/></div>
+    <div class="pm-row"><label>Lösenord</label><input type="password" class="txt-input" id="loginPw" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"/></div>
+    <div class="pm-btns">
+      <button class="btn btn-ghost" onclick="closeLogin()">Avbryt</button>
+      <button class="btn" id="loginBtn" onclick="doLogin()">Logga in</button>
+    </div>
   </div>
 </div>
 
@@ -902,14 +1164,226 @@ function renderCal(){
       const ds=ymd(day), isT=day.getTime()===today.getTime();
       const div=document.createElement('div'); div.className='cal-day'+(isT?' today':'');
       let h='<div class="cal-day-date">'+day.getDate()+'/'+(day.getMonth()+1)+'</div>';
+      plansOn(ds).filter(p=>planSportFilter(p,sport)).forEach(p=>{ h+=planChip(p); });
       (byDate[ds]||[]).forEach(a=>{
         const col=passColor(a), bang=passLong(a)?' <b style="color:var(--text)">!</b>':'';
         h+='<div class="cal-activity" style="background:'+hexA(col,.16)+';border-color:'+hexA(col,.55)+'"><span class="act-km" style="color:'+col+'">'+aSportShort(a.sport_type)+' '+(a.distance_km||0)+'km'+bang+'</span>'+fmtHM(a.duration_seconds||0)+'</div>';
       });
-      div.innerHTML=h; grid.appendChild(div);
+      div.innerHTML=h; div.onclick=()=>openPlanModal(ds); grid.appendChild(div);
     }
   }
 }
+
+// ══════════════════════════════════
+// PLANERADE PASS (sparas i localStorage)
+// ══════════════════════════════════
+const PLAN_KEY = 'esEnd_plans_v1';
+let PLANS = [];
+let pmEditId = null;
+const PLAN_SPORT_SHORT = {running:'Löp',cycling:'Cykel',skiing:'Skid',strength:'Styrka',other:'Träning'};
+
+// Utan inloggning: planer i localStorage. Inloggad: Supabase-tabellen planned_workouts (RLS = bara egna rader).
+function localPlans(){
+  try{ const d=JSON.parse(localStorage.getItem(PLAN_KEY)||'[]'); return Array.isArray(d)?d:[]; }catch(e){ return []; }
+}
+function loadPlans(){ PLANS = authSession() ? [] : localPlans(); }
+function storePlans(){ if(!authSession()) localStorage.setItem(PLAN_KEY, JSON.stringify(PLANS)); }
+
+// ── Supabase Auth (REST, utan supabase-js) ──
+const AUTH_KEY = 'esEnd_auth_v1';
+function authSession(){ try{ return JSON.parse(localStorage.getItem(AUTH_KEY)||'null'); }catch(e){ return null; } }
+function setAuthSession(j){
+  if(!j){ localStorage.removeItem(AUTH_KEY); return; }
+  localStorage.setItem(AUTH_KEY, JSON.stringify({
+    access_token:j.access_token, refresh_token:j.refresh_token,
+    expires_at:Date.now()+(j.expires_in||3600)*1000, email:(j.user&&j.user.email)||(authSession()||{}).email||''
+  }));
+}
+async function authToken(grant, body){
+  const r=await fetch(SUPABASE_URL+'/auth/v1/token?grant_type='+grant,{method:'POST',headers:{apikey:SUPABASE_KEY,'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(j.error_description||j.msg||j.message||('HTTP '+r.status));
+  return j;
+}
+async function validAccessToken(force){
+  const s=authSession(); if(!s) return null;
+  if(!force && s.expires_at-Date.now()>60000) return s.access_token;
+  try{ setAuthSession(await authToken('refresh_token',{refresh_token:s.refresh_token})); return authSession().access_token; }
+  catch(e){ setAuthSession(null); updateSyncBtn(); throw new Error('Inloggningen har gått ut – logga in igen.'); }
+}
+async function planApi(method, query, body, prefer){
+  const go=async tok=>fetch(SUPABASE_URL+'/rest/v1/planned_workouts'+(query||''),{method,
+    headers:Object.assign({apikey:SUPABASE_KEY,Authorization:'Bearer '+tok,'Content-Type':'application/json'},prefer?{Prefer:prefer}:{}),
+    body:body?JSON.stringify(body):undefined});
+  let r=await go(await validAccessToken(false));
+  if(r.status===401) r=await go(await validAccessToken(true));
+  if(!r.ok){ const t=await r.text(); throw new Error('Supabase '+r.status+': '+t.slice(0,160)); }
+  return r.status===204?null:r.json().catch(()=>null);
+}
+const rowToPlan = r => ({id:r.id,date:r.date,sport:r.sport,type:r.type,km:r.km!=null?+r.km:null,min:r.duration_min!=null?+r.duration_min:null,note:r.note||''});
+const planToRow = p => ({id:p.id,date:p.date,sport:p.sport,type:p.type,km:p.km,duration_min:p.min,note:p.note||null,updated_at:new Date().toISOString()});
+async function upsertRemote(list){
+  if(list.length) await planApi('POST','?on_conflict=id',list.map(planToRow),'resolution=merge-duplicates,return=minimal');
+}
+async function loadRemotePlans(){
+  if(!authSession()) return;
+  try{
+    const rows=await planApi('GET','?select=*&order=date.asc');
+    PLANS=(rows||[]).map(rowToPlan);
+  }catch(e){ console.warn('Planer kunde inte hämtas:',e.message); alert('Kunde inte hämta planerade pass: '+e.message); }
+  updateSyncBtn(); renderCal(); renderWeekSummary();
+}
+
+function updateSyncBtn(){
+  const b=document.getElementById('syncBtn'); if(!b) return;
+  const s=authSession();
+  b.classList.toggle('on',!!s);
+  b.textContent=s?('● Synkas · '+(s.email||'inloggad')):'Logga in för synk';
+  b.title=s?'Klicka för att logga ut':'Synka planerade pass mellan enheter';
+}
+function onSyncBtn(){
+  if(authSession()){
+    if(!confirm('Logga ut? Planerna ligger kvar i Supabase men visas inte här förrän du loggar in igen.')) return;
+    const s=authSession();
+    fetch(SUPABASE_URL+'/auth/v1/logout',{method:'POST',headers:{apikey:SUPABASE_KEY,Authorization:'Bearer '+s.access_token}}).catch(()=>{});
+    setAuthSession(null); loadPlans(); updateSyncBtn(); renderCal(); renderWeekSummary();
+    return;
+  }
+  document.getElementById('loginErr').style.display='none';
+  document.getElementById('loginPw').value='';
+  document.getElementById('loginModal').classList.add('open');
+  setTimeout(()=>document.getElementById('loginEmail').focus(),50);
+}
+function closeLogin(){ document.getElementById('loginModal').classList.remove('open'); document.getElementById('loginPw').value=''; }
+async function doLogin(){
+  const email=document.getElementById('loginEmail').value.trim(), pw=document.getElementById('loginPw').value;
+  const err=document.getElementById('loginErr'), btn=document.getElementById('loginBtn');
+  if(!email||!pw){ err.textContent='Fyll i e-post och lösenord.'; err.style.display='block'; return; }
+  btn.disabled=true; btn.textContent='Loggar in...'; err.style.display='none';
+  try{
+    setAuthSession(await authToken('password',{email,password:pw}));
+    // Flytta upp planer som skapats lokalt innan inloggning
+    const local=localPlans();
+    if(local.length){ await upsertRemote(local); localStorage.removeItem(PLAN_KEY); }
+    closeLogin(); await loadRemotePlans();
+  }catch(e){
+    if(!authSession()){ err.textContent=/invalid/i.test(e.message)?'Fel e-post eller lösenord.':e.message; err.style.display='block'; }
+    else alert('Inloggad, men lokala planer kunde inte laddas upp: '+e.message);
+  }finally{ btn.disabled=false; btn.textContent='Logga in'; }
+}
+function escHtml(s){ return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
+function plansOn(ds){ return PLANS.filter(p=>p.date===ds); }
+function isRestPlan(p){ return p.type==='Vila'; }
+
+// Vilken sportkategori ett Garmin-pass tillhor (samma indelning som planens sport)
+function actPlanSport(a){
+  const s=a.sport_type||'';
+  if(isRunAny(s)) return 'running';
+  if(/cycl/.test(s)) return 'cycling';
+  if(/ski/.test(s)) return 'skiing';
+  if(/strength/.test(s)) return 'strength';
+  return 'other';
+}
+// Planen visas under kalenderns sportfilter (styrka raknas som "Ovriga")
+function planSportFilter(p,sport){
+  if(sport==='all') return true;
+  if(sport==='other') return p.sport==='other'||p.sport==='strength';
+  return p.sport===sport;
+}
+// Status for en plan: done (passet finns), missed (dagen passerad utan pass), planned, rest
+function planStatus(p){
+  const acts=DATA.activities.filter(a=>a.date===p.date && actPlanSport(a)===p.sport);
+  const km=acts.reduce((s,a)=>s+(a.distance_km||0),0), sec=acts.reduce((s,a)=>s+(a.duration_seconds||0),0);
+  if(isRestPlan(p)) return {st:'rest',acts,km,sec};
+  if(acts.length) return {st:'done',acts,km,sec};
+  const today=ymd(new Date());
+  return {st:p.date<today?'missed':'planned',acts,km,sec};
+}
+function planTargetTxt(p){
+  const parts=[];
+  if(p.km) parts.push(p.km+' km');
+  if(p.min) parts.push(fmtHM(p.min*60));
+  return parts.join(' · ');
+}
+function planChip(p){
+  const s=planStatus(p);
+  const title=isRestPlan(p)?'Vila':(PLAN_SPORT_SHORT[p.sport]||'Pass')+' '+escHtml(p.type);
+  let sub='';
+  if(s.st==='done'){
+    const pct = p.km ? Math.round(s.km/p.km*100) : (p.min ? Math.round(s.sec/60/p.min*100) : null);
+    sub='<span class="pl-s">&#10003; '+(p.km?(Math.round(s.km*10)/10)+'/'+p.km+' km':fmtHM(s.sec))+(pct!=null?' ('+pct+'%)':'')+'</span>';
+  } else if(s.st==='missed'){
+    sub='<span class="pl-s">Missat</span> '+planTargetTxt(p);
+  } else {
+    sub=planTargetTxt(p);
+  }
+  return '<div class="cal-plan '+s.st+'" title="'+escHtml(p.note)+'" onclick="event.stopPropagation();openPlanModal(\''+p.date+'\',\''+p.id+'\')"><span class="pl-t">'+title+'</span>'+sub+'</div>';
+}
+
+function openPlanModal(ds,id){
+  const p=id?PLANS.find(x=>x.id===id):null;
+  pmEditId=p?p.id:null;
+  document.getElementById('pmTitle').textContent=p?'Ändra planerat pass':'Planera pass';
+  document.getElementById('pmDate').value=p?p.date:ds;
+  document.getElementById('pmSport').value=p?p.sport:'running';
+  document.getElementById('pmType').value=p?p.type:'Lugnt';
+  document.getElementById('pmKm').value=p&&p.km?p.km:'';
+  document.getElementById('pmMin').value=p&&p.min?p.min:'';
+  document.getElementById('pmNote').value=p?(p.note||''):'';
+  document.getElementById('pmDel').style.display=p?'':'none';
+  // Visa vad som faktiskt gjordes den dagen
+  const acts=DATA.activities.filter(a=>a.date===ds);
+  const box=document.getElementById('pmActual');
+  if(acts.length){
+    box.innerHTML='<b>Genomfört '+ds+':</b><br>'+acts.map(a=>aSportShort(a.sport_type)+' '+(a.distance_km||0)+' km · '+fmtHM(a.duration_seconds||0)).join('<br>');
+    box.style.display='';
+  } else box.style.display='none';
+  document.getElementById('planModal').classList.add('open');
+}
+function closePlanModal(){ document.getElementById('planModal').classList.remove('open'); pmEditId=null; }
+function savePlan(){
+  const date=document.getElementById('pmDate').value;
+  if(!date){ alert('Välj ett datum.'); return; }
+  const num=id=>{ const v=parseFloat(document.getElementById(id).value); return isFinite(v)&&v>0?v:null; };
+  const p={
+    id: pmEditId || ('p'+Date.now().toString(36)+Math.random().toString(36).slice(2,6)),
+    date,
+    sport: document.getElementById('pmSport').value,
+    type: document.getElementById('pmType').value,
+    km: num('pmKm'),
+    min: num('pmMin'),
+    note: document.getElementById('pmNote').value.trim()
+  };
+  const i=PLANS.findIndex(x=>x.id===p.id);
+  if(i>=0) PLANS[i]=p; else PLANS.push(p);
+  storePlans(); closePlanModal(); renderCal(); renderWeekSummary();
+  if(authSession()) upsertRemote([p]).catch(e=>{ alert('Kunde inte spara i Supabase: '+e.message); loadRemotePlans(); });
+}
+function deletePlan(){
+  if(!pmEditId) return;
+  if(!confirm('Ta bort det planerade passet?')) return;
+  const id=pmEditId;
+  PLANS=PLANS.filter(x=>x.id!==id);
+  storePlans(); closePlanModal(); renderCal(); renderWeekSummary();
+  if(authSession()) planApi('DELETE','?id=eq.'+encodeURIComponent(id),null,'return=minimal').catch(e=>{ alert('Kunde inte ta bort i Supabase: '+e.message); loadRemotePlans(); });
+}
+// Summering: planerat vs genomfort for perioden (endast passerade/dagens planer raknas i %)
+function renderPlanSummary(fromDs,toDs,sport){
+  const val=document.getElementById('wkPlan'), sub=document.getElementById('wkPlanSub');
+  if(!val) return;
+  const ps=PLANS.filter(p=>p.date>=fromDs&&p.date<=toDs&&!isRestPlan(p)&&planSportFilter(p,sport));
+  if(!ps.length){ val.innerHTML='-'; sub.textContent='Inga planerade pass'; return; }
+  const today=ymd(new Date());
+  const due=ps.filter(p=>p.date<=today);
+  const st=ps.map(p=>({p,s:planStatus(p)}));
+  const done=st.filter(x=>x.s.st==='done').length;
+  const plKm=ps.reduce((s,p)=>s+(p.km||0),0);
+  const doKm=st.filter(x=>x.s.st==='done').reduce((s,x)=>s+x.s.km,0);
+  val.innerHTML=done+'<span class="unt">/ '+ps.length+' pass</span>';
+  const pct=due.length?Math.round(due.filter(p=>planStatus(p).st==='done').length/due.length*100):null;
+  sub.innerHTML=(pct!=null?pct+'% hittills · ':'')+(plKm?(Math.round(doKm*10)/10)+'/'+(Math.round(plKm*10)/10)+' km':'');
+}
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closePlanModal(); closeLogin(); } });
 
 let sumZoneType = 'hr';
 
@@ -945,6 +1419,7 @@ function renderWeekSummary(){
   document.getElementById('wkT').textContent = ts ? fmtHM(ts) : '0m';
   const tk = wa.reduce((s,a) => s+(a.distance_km||0), 0);
   document.getElementById('wkD').innerHTML = (Math.round(tk*10)/10)+'<span class="unt">km</span>';
+  renderPlanSummary(ymd(startDate), ymd(endDate), sport);
 
   // Halsosnitt for perioden + jamforelse mot 1-arssnitt
   const yearAgo = new Date(endDate); yearAgo.setDate(yearAgo.getDate()-365);
@@ -1153,26 +1628,231 @@ function renderLoad(){
 // ══════════════════════════════════
 // PAGE 3: HRV
 // ══════════════════════════════════
+// ── HRV & Sömn: samma analys som klientens återhämtningsrapport ──
+const HS_RED='#F93822', HS_DOT='rgba(230,230,240,.32)', HS_BAND='rgba(255,255,255,.08)', HS_LINE='rgba(230,230,240,.55)';
+const HS_MON=['jan','feb','mar','apr','maj','jun','jul','aug','sep','okt','nov','dec'];
+const HS_MON_L=['Januari','Februari','Mars','April','Maj','Juni','Juli','Augusti','September','Oktober','November','December'];
+const HS_WD=['Mån','Tis','Ons','Tor','Fre','Lör','Sön'];
+const HS_WD_NIGHT=['Mot måndag','Mot tisdag','Mot onsdag','Mot torsdag','Mot fredag','Mot lördag','Mot söndag'];
+const hsNum=v=>(v==null||v===''||isNaN(+v))?null:+v;
+const hsMean=a=>{const v=a.filter(x=>x!=null);return v.length?v.reduce((s,x)=>s+x,0)/v.length:null;};
+const hsSd=a=>{const v=a.filter(x=>x!=null);if(v.length<2)return null;const m=hsMean(v);return Math.sqrt(v.reduce((s,x)=>s+(x-m)*(x-m),0)/(v.length-1));};
+const hsFmt=(v,d)=>v==null?'-':(+v).toFixed(d||0).replace('.',',');
+
+// Kontinuerlig dygnsserie fran forsta till sista matning, med rullande 7d-snitt och 60d-baslinje
+function hsSeries(){
+  const H=DATA.health.filter(h=>h.date).slice().sort((a,b)=>a.date.localeCompare(b.date));
+  if(!H.length) return [];
+  const by={}; H.forEach(h=>by[h.date]=h);
+  const loadBy={}; DATA.activities.forEach(a=>{ if(a.date) loadBy[a.date]=(loadBy[a.date]||0)+activityLoad(a); });
+  const out=[], d=new Date(H[0].date+'T00:00:00'), end=new Date(H[H.length-1].date+'T00:00:00');
+  for(;d<=end;d.setDate(d.getDate()+1)){
+    const ds=ymd(d), h=by[ds]||{};
+    const deep=hsNum(h.sleep_deep_min), rem=hsNum(h.sleep_rem_min), tot=hsNum(h.sleep_total_min);
+    out.push({date:ds, dow:(d.getDay()+6)%7, hrv:hsNum(h.hrv_rmssd), rhr:hsNum(h.resting_hr), sleep:tot!=null?tot/60:null,
+      deep:deep!=null?deep/60:null, rem:rem!=null?rem/60:null,
+      light:(tot!=null&&deep!=null&&rem!=null)?Math.max(0,tot-deep-rem)/60:null,
+      stress:hsNum(h.avg_stress), bb:hsNum(h.body_battery_high),
+      load:Math.round((loadBy[ds]||0)*10)/10,
+      sStart:h.sleep_start_local||null, sEnd:h.sleep_end_local||null});
+  }
+  const roll=(i,n,k)=>out.slice(Math.max(0,i-n+1),i+1).map(o=>o[k]);
+  out.forEach((o,i)=>{
+    const w7=roll(i,7,'hrv').filter(x=>x!=null); o.hrv7=w7.length>=3?hsMean(w7):null;
+    const r7=roll(i,7,'rhr').filter(x=>x!=null); o.rhr7=r7.length>=3?hsMean(r7):null;
+    const s7=roll(i,7,'sleep').filter(x=>x!=null); o.sleep7=s7.length>=3?hsMean(s7):null;
+    const w60=roll(i,60,'hrv').filter(x=>x!=null);
+    if(w60.length>=30){ o.base=hsMean(w60); o.sd=hsSd(w60); }
+    o.dev=(o.hrv7!=null&&o.base)?(o.hrv7/o.base-1)*100:null;
+    o.load7=hsMean(roll(i,7,'load'));
+    const st=roll(i,7,'stress').filter(x=>x!=null); o.stress7=st.length>=3?hsMean(st):null;
+    const bb=roll(i,7,'bb').filter(x=>x!=null); o.bb7=bb.length>=3?hsMean(bb):null;
+    const dr=out.slice(Math.max(0,i-6),i+1).filter(x=>x.deep!=null&&x.rem!=null&&x.sleep);
+    o.dr7=dr.length>=3?hsMean(dr.map(x=>(x.deep+x.rem)/x.sleep*100)):null;
+  });
+  return out;
+}
+
+// Timmar efter 18:00 kvallen fore morgonen 'date' (0 = 18:00, 6 = 00:00, 13 = 07:00)
+function hsClock(ts,date){
+  if(!ts) return null;
+  const t=new Date(String(ts).replace(' ','T')), ref=new Date(date+'T00:00:00'); ref.setDate(ref.getDate()-1); ref.setHours(18,0,0,0);
+  const h=(t-ref)/36e5; return (h>=0&&h<=30)?h:null;
+}
+const hsClockLbl=v=>{ const m=Math.round(((v+18)%24)*60); return String(Math.floor(m/60)%24).padStart(2,'0')+':'+String(m%60).padStart(2,'0'); };
+
+function hsRenderExtra(S,labels,xAx,base){
+  const dim='rgba(230,230,240,.22)';
+
+  // A) Traningsbelastning och HRV
+  kill('hsLoad');
+  CH.hsLoad=new Chart(document.getElementById('hsLoadChart'),{type:'bar',data:{labels,datasets:[
+    {type:'line',label:'HRV 7d',data:S.map(o=>o.hrv7),borderColor:HS_RED,borderWidth:2.5,pointRadius:0,tension:.25,spanGaps:true,yAxisID:'yH',order:0},
+    {type:'line',label:'HRV-baslinje',data:S.map(o=>o.base??null),borderColor:HS_LINE,borderDash:[5,4],borderWidth:1.5,pointRadius:0,yAxisID:'yH',order:1},
+    {type:'line',label:'Belastning 7d',data:S.map(o=>o.load7),borderColor:'#f97316',borderWidth:2,pointRadius:0,tension:.3,yAxisID:'yL',order:2},
+    {label:'Belastning',data:S.map(o=>o.load||null),backgroundColor:dim,barPercentage:1,categoryPercentage:.9,yAxisID:'yL',order:3}
+  ]},options:{...base,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw==null?null:c.dataset.label+': '+hsFmt(c.raw,c.dataset.yAxisID==='yH'?1:0)+(c.dataset.yAxisID==='yH'?' ms':'')}}},
+    scales:{x:xAx,yH:{position:'left',grid:grd,ticks:{...tck,callback:v=>v+' ms'}},yL:{position:'right',grid:{display:false},beginAtZero:true,ticks:{...tck,color:'#f97316'}}}}});
+
+  // B) Stress och Body Battery
+  kill('hsStress');
+  CH.hsStress=new Chart(document.getElementById('hsStressChart'),{type:'line',data:{labels,datasets:[
+    {label:'Stress',data:S.map(o=>o.stress),showLine:false,pointRadius:1.8,pointBackgroundColor:hexA(HS_RED,.35),pointBorderWidth:0},
+    {label:'Body Battery-topp',data:S.map(o=>o.bb),showLine:false,pointRadius:1.8,pointBackgroundColor:'rgba(56,189,248,.35)',pointBorderWidth:0},
+    {label:'Stress 7d',data:S.map(o=>o.stress7),borderColor:HS_RED,borderWidth:2.5,pointRadius:0,tension:.25,spanGaps:true},
+    {label:'Body Battery 7d',data:S.map(o=>o.bb7),borderColor:'#38bdf8',borderWidth:2.5,pointRadius:0,tension:.25,spanGaps:true}
+  ]},options:{...base,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw==null?null:c.dataset.label+': '+hsFmt(c.raw)}}},
+    scales:{x:xAx,y:{grid:grd,min:0,max:100,ticks:tck}}}});
+
+  // C) Somnens sammansattning
+  kill('hsStage');
+  CH.hsStage=new Chart(document.getElementById('hsStageChart'),{type:'bar',data:{labels,datasets:[
+    {type:'line',label:'Djup + REM',data:S.map(o=>o.dr7),borderColor:HS_RED,borderWidth:2.5,pointRadius:0,tension:.25,spanGaps:true,yAxisID:'yP',order:0},
+    {label:'Djup',data:S.map(o=>o.deep),backgroundColor:'rgba(59,130,246,.75)',stack:'s',barPercentage:1,categoryPercentage:.9,order:1},
+    {label:'REM',data:S.map(o=>o.rem),backgroundColor:'rgba(167,139,250,.7)',stack:'s',barPercentage:1,categoryPercentage:.9,order:1},
+    {label:'Lätt',data:S.map(o=>o.light),backgroundColor:dim,stack:'s',barPercentage:1,categoryPercentage:.9,order:1}
+  ]},options:{...base,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw==null?null:c.dataset.label+': '+(c.dataset.yAxisID==='yP'?hsFmt(c.raw)+' %':fmtHM(Math.round(c.raw*3600)))}}},
+    scales:{x:{...xAx,stacked:true},y:{stacked:true,grid:grd,ticks:{...tck,callback:v=>v+' h'}},yP:{position:'right',grid:{display:false},min:0,max:60,ticks:{...tck,color:HS_RED,callback:v=>v+'%'}}}}});
+
+  // D) Laggtider
+  const T=S.map(o=>{const s=hsClock(o.sStart,o.date), e=hsClock(o.sEnd,o.date); return (s!=null&&e!=null&&e>s)?[s,e]:null;});
+  const nT=T.filter(Boolean).length, wrap=document.getElementById('hsTimingWrap'), empty=document.getElementById('hsTimingEmpty');
+  kill('hsTiming');
+  if(nT<3){
+    wrap.style.display='none'; empty.style.display='flex';
+    empty.innerHTML='Läggtider saknas ännu.<br>De sparas från och med nästa Garmin-synk. För att fylla i historiken: kör<br><code>python garmin_sync.py sync --days 180</code>';
+    document.getElementById('hsTimingLead').textContent='Varje stapel är en natt, från läggdags till uppvaknande.';
+  } else {
+    wrap.style.display=''; empty.style.display='none';
+    const last14=T.slice(-14).filter(Boolean), st=last14.map(t=>t[0]), en=last14.map(t=>t[1]);
+    const sdS=hsSd(st), sdE=hsSd(en);
+    document.getElementById('hsTimingLead').innerHTML='Senaste 14 nätterna: läggdags i snitt <b>'+hsClockLbl(hsMean(st))+'</b> (± '+(sdS!=null?Math.round(sdS*60):'-')+' min), uppvaknande <b>'+hsClockLbl(hsMean(en))+'</b> (± '+(sdE!=null?Math.round(sdE*60):'-')+' min). Målet är under ± 30 min.';
+    CH.hsTiming=new Chart(document.getElementById('hsTimingChart'),{type:'bar',data:{labels,datasets:[
+      {label:'Sömn',data:T,backgroundColor:T.map(t=>t&&sdS!=null&&Math.abs(t[0]-hsMean(st))*60>30?hexA(HS_RED,.75):'rgba(167,139,250,.6)'),borderRadius:2,barPercentage:1,categoryPercentage:.85}
+    ]},options:{...base,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw?hsClockLbl(c.raw[0])+' – '+hsClockLbl(c.raw[1]):null}}},
+      scales:{x:xAx,y:{reverse:true,min:2,max:17,grid:grd,ticks:{...tck,stepSize:2,callback:v=>hsClockLbl(v)}}}}});
+  }
+
+  // E) Samband: gardagens belastning -> nattens HRV mot baslinjen
+  const pts=[]; for(let i=1;i<S.length;i++){ const o=S[i]; if(o.hrv!=null&&o.base) pts.push({x:S[i-1].load,y:(o.hrv/o.base-1)*100,date:o.date}); }
+  let fit=[], txt='För få nätter för att räkna fram ett samband.';
+  if(pts.length>=20){
+    const mx=hsMean(pts.map(p=>p.x)), my=hsMean(pts.map(p=>p.y));
+    let sxy=0,sxx=0,syy=0; pts.forEach(p=>{sxy+=(p.x-mx)*(p.y-my);sxx+=(p.x-mx)**2;syy+=(p.y-my)**2;});
+    const b=sxx?sxy/sxx:0, a=my-b*mx, r=(sxx&&syy)?sxy/Math.sqrt(sxx*syy):0, xMax=Math.max(...pts.map(p=>p.x));
+    fit=[{x:0,y:a},{x:xMax,y:a+b*xMax}];
+    const rest=pts.filter(p=>p.x<10), sorted=pts.map(p=>p.x).filter(x=>x>=10).sort((p,q)=>p-q), cut=sorted[Math.floor(sorted.length*.8)];
+    const hard=cut!=null?pts.filter(p=>p.x>=cut):[];
+    const strength=Math.abs(r)<0.1?'Inget tydligt samband':(Math.abs(r)<0.3?'Ett svagt samband':'Ett tydligt samband');
+    txt='<b>'+strength+'</b> (r = '+hsFmt(r,2)+', '+pts.length+' nätter). '
+      +(rest.length?'Efter vilodagar: <b>'+(hsMean(rest.map(p=>p.y))>=0?'+':'')+hsFmt(hsMean(rest.map(p=>p.y)),1)+' %</b> mot baslinjen ('+rest.length+' nätter). ':'')
+      +(hard.length?'Efter de 20 % tyngsta dagarna: <b>'+(hsMean(hard.map(p=>p.y))>=0?'+':'')+hsFmt(hsMean(hard.map(p=>p.y)),1)+' %</b> ('+hard.length+' nätter).':'');
+  }
+  document.getElementById('hsScatterTxt').innerHTML=txt;
+  kill('hsScatter');
+  CH.hsScatter=new Chart(document.getElementById('hsScatterChart'),{type:'scatter',data:{datasets:[
+    {label:'Natt',data:pts,pointRadius:3,pointBackgroundColor:'rgba(230,230,240,.4)',pointBorderWidth:0},
+    {label:'Trend',data:fit,type:'line',borderColor:HS_RED,borderWidth:2,pointRadius:0}
+  ]},options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false},tooltip:{filter:i=>i.dataset.label==='Natt',callbacks:{label:c=>c.raw.date+': belastning '+hsFmt(c.raw.x)+', HRV '+(c.raw.y>=0?'+':'')+hsFmt(c.raw.y,1)+' %'}}},
+    scales:{x:{grid:grd,beginAtZero:true,ticks:tck,title:{display:true,text:'Belastning dagen innan',color:'#5a5a70'}},
+      y:{grid:{color:c=>c.tick.value===0?'rgba(230,230,240,.6)':'rgba(255,255,255,0.05)',lineWidth:c=>c.tick.value===0?2:1},ticks:{...tck,callback:v=>(v>0?'+':'')+v+'%'},title:{display:true,text:'HRV mot baslinjen',color:'#5a5a70'}}}}});
+}
+
 function renderHRV(){
-  const h=DATA.health; if(!h.length) return;
-  const hrv=h.map(d=>d.hrv_rmssd),slp=h.map(d=>d.sleep_score),labels=h.map(d=>d.date.slice(5));
-  const hrv7=hrv.map((_,i)=>{const sl=hrv.slice(Math.max(0,i-6),i+1);return Math.round(sl.reduce((a,b)=>a+b,0)/sl.length*10)/10;});
-  const last=h[h.length-1],avg7=hrv7[hrv7.length-1],diff=last.hrv_rmssd-avg7;
+  const all=hsSeries(); if(!all.length) return;
+  const days=parseInt(document.getElementById('hsPeriod').value,10);
+  const S=days?all.slice(-days):all;
+  const last=S[S.length-1];
+  const set=(id,v)=>{const e=document.getElementById(id); if(e) e.innerHTML=v;};
+  set('hsPeriodLbl', S[0].date+' – '+last.date+' · '+S.filter(o=>o.hrv!=null).length+' nätter med HRV');
+
+  // Statusbadge: 7d-snitt mot baslinjen
+  const lastB=[...S].reverse().find(o=>o.dev!=null);
   const badge=document.getElementById('hrvBadge'),txt=document.getElementById('hrvBadgeTxt');
   badge.className='hrv-badge';
-  if(diff<-8){badge.classList.add('low');txt.textContent='HRV '+last.hrv_rmssd+' ms - '+Math.abs(Math.round(diff))+' ms under 7d-snitt. Vila rekommenderas.';}
-  else if(diff<-4){badge.classList.add('warn');txt.textContent='HRV '+last.hrv_rmssd+' ms - nagot under snitt. Bevaka belastningen.';}
-  else{badge.classList.add('ok');txt.textContent='HRV '+last.hrv_rmssd+' ms - normalt. Traningsstatus OK.';}
-  kill('hrv');
-  const ctx=document.getElementById('hrvChart').getContext('2d');
-  CH.hrv=new Chart(ctx,{type:'line',data:{labels,datasets:[
-    {data:hrv,borderColor:'#a78bfa',backgroundColor:'rgba(167,139,250,.08)',pointRadius:2,tension:.3,fill:true,yAxisID:'yH'},
-    {data:hrv7,borderColor:'rgba(239,68,68,.45)',backgroundColor:'transparent',borderDash:[5,4],pointRadius:0,tension:.4,yAxisID:'yH'},
-    {data:slp,borderColor:'#38bdf8',backgroundColor:'rgba(56,189,248,.07)',pointRadius:2,tension:.3,fill:true,yAxisID:'yS'}
-  ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false}},
-    scales:{x:{grid:grd,ticks:{...tck,maxTicksLimit:10,maxRotation:0}},
-      yH:{position:'left',grid:grd,ticks:{...tck,callback:v=>v+' ms'},title:{display:true,text:'HRV (ms)',color:'#a78bfa'}},
-      yS:{position:'right',grid:{display:false},ticks:tck,title:{display:true,text:'Somnpong',color:'#38bdf8'},min:0,max:100}}}});
+  if(!lastB){ badge.classList.add('ok'); txt.textContent='För lite data för baslinje ännu.'; }
+  else{
+    const below=lastB.sd&&lastB.hrv7<lastB.base-lastB.sd;
+    const msg='HRV 7d '+hsFmt(lastB.hrv7)+' ms · '+(lastB.dev>=0?'+':'')+Math.round(lastB.dev)+' % mot baslinjen '+hsFmt(lastB.base)+' ms';
+    if(below){ badge.classList.add('low'); txt.textContent=msg+' – under normal variation. Prioritera återhämtning.'; }
+    else if(lastB.dev<-5){ badge.classList.add('warn'); txt.textContent=msg+' – inom normal variation, men värd att följa.'; }
+    else{ badge.classList.add('ok'); txt.textContent=msg+' – normalt.'; }
+  }
+
+  // Nyckeltal
+  if(lastB){ set('hsHrv',hsFmt(lastB.hrv7)+'<span class="unt"> ms</span>'); set('hsHrvSub',(lastB.dev>=0?'+':'')+Math.round(lastB.dev)+' % mot din baslinje på '+hsFmt(lastB.base)); }
+  else { set('hsHrv','-'); set('hsHrvSub',''); }
+  const rhrNow=[...S].reverse().find(o=>o.rhr7!=null);
+  const firstMon=S[0].date.slice(0,7), rhrFirst=hsMean(S.filter(o=>o.date.slice(0,7)===firstMon).map(o=>o.rhr));
+  set('hsRhr', rhrNow?hsFmt(rhrNow.rhr7)+'<span class="unt"> bpm</span>':'-');
+  if(rhrNow&&rhrFirst!=null){ const d=rhrNow.rhr7-rhrFirst, m=+firstMon.slice(5)-1;
+    set('hsRhrSub', HS_MON_L[m]+': '+hsFmt(rhrFirst,1)+'. '+(d<=0?'En nedgång':'En ökning')+' på '+hsFmt(Math.abs(d),1)+' slag'); }
+  else set('hsRhrSub','');
+  const slAll=hsMean(S.map(o=>o.sleep)), sl7=hsMean(S.slice(-7).map(o=>o.sleep));
+  set('hsSleep', slAll!=null?hsFmt(slAll,1)+'<span class="unt"> h</span>':'-');
+  set('hsSleepSub', sl7!=null?'Senaste veckan: '+hsFmt(sl7,1)+' h':'');
+
+  // Veckomonster
+  const hrvMean=hsMean(S.map(o=>o.hrv));
+  const wd=HS_WD.map((_,i)=>{const v=S.filter(o=>o.dow===i).map(o=>o.hrv).filter(x=>x!=null); const m=hsMean(v); return {n:v.length, m, dev:(m!=null&&hrvMean)?(m/hrvMean-1)*100:null};});
+  let weak=-1; wd.forEach((w,i)=>{ if(w.dev!=null&&(weak<0||w.dev<wd[weak].dev)) weak=i; });
+  if(weak>=0){ set('hsWeak',HS_WD_NIGHT[weak]); set('hsWeakSub',Math.abs(Math.round(wd[weak].dev))+' % '+(wd[weak].dev<0?'under':'över')+' ditt snitt'); }
+
+  const labels=S.map(o=>{const d=new Date(o.date+'T00:00:00'); return d.getDate()+' '+HS_MON[d.getMonth()];});
+  const xAx={grid:grd,ticks:{...tck,maxTicksLimit:8,maxRotation:0,autoSkip:true}};
+  const base={responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false}}};
+
+  // 1) HRV mot baslinje
+  kill('hsHrv');
+  CH.hsHrv=new Chart(document.getElementById('hsHrvChart'),{type:'line',data:{labels,datasets:[
+    {label:'Övre',data:S.map(o=>o.base!=null&&o.sd!=null?o.base+o.sd:null),borderColor:'transparent',pointRadius:0,fill:false},
+    {label:'Normal variation',data:S.map(o=>o.base!=null&&o.sd!=null?o.base-o.sd:null),borderColor:'transparent',backgroundColor:HS_BAND,pointRadius:0,fill:'-1'},
+    {label:'Natt',data:S.map(o=>o.hrv),showLine:false,pointRadius:2,pointBackgroundColor:HS_DOT,pointBorderWidth:0},
+    {label:'Baslinje',data:S.map(o=>o.base??null),borderColor:HS_LINE,borderDash:[5,4],borderWidth:1.5,pointRadius:0},
+    {label:'7d snitt',data:S.map(o=>o.hrv7),borderColor:HS_RED,borderWidth:2.5,pointRadius:0,tension:.25,spanGaps:true}
+  ]},options:{...base,plugins:{legend:{display:false},tooltip:{filter:i=>i.dataset.label!=='Övre',callbacks:{label:c=>c.raw==null?null:c.dataset.label+': '+hsFmt(c.raw,1)+' ms'}}},
+    scales:{x:xAx,y:{grid:grd,ticks:{...tck,callback:v=>v+' ms'}}}}});
+
+  // 2) Avvikelse i procent
+  kill('hsDev');
+  const dev=S.map(o=>o.dev);
+  CH.hsDev=new Chart(document.getElementById('hsDevChart'),{type:'bar',data:{labels,datasets:[
+    {data:dev,backgroundColor:dev.map(v=>v!=null&&v<0?hexA(HS_RED,.8):'rgba(230,230,240,.3)'),barPercentage:1,categoryPercentage:1}
+  ]},options:{...base,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw==null?null:(c.raw>=0?'+':'')+hsFmt(c.raw,1)+' % mot baslinjen'}}},
+    scales:{x:xAx,y:{grid:{color:c=>c.tick.value===0?'rgba(230,230,240,.6)':'rgba(255,255,255,0.05)',lineWidth:c=>c.tick.value===0?2:1},ticks:{...tck,callback:v=>(v>0?'+':'')+v+'%'}}}}});
+
+  // 3) Vilopuls
+  kill('hsRhr');
+  CH.hsRhr=new Chart(document.getElementById('hsRhrChart'),{type:'line',data:{labels,datasets:[
+    {label:'Natt',data:S.map(o=>o.rhr),showLine:false,pointRadius:2,pointBackgroundColor:HS_DOT,pointBorderWidth:0},
+    {label:'7d snitt',data:S.map(o=>o.rhr7),borderColor:HS_RED,borderWidth:2.5,pointRadius:0,tension:.25,spanGaps:true}
+  ]},options:{...base,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw==null?null:c.dataset.label+': '+hsFmt(c.raw,1)+' bpm'}}},
+    scales:{x:xAx,y:{grid:grd,ticks:{...tck,callback:v=>v+''}}}}});
+
+  // 4) Somn per natt
+  kill('hsSleep');
+  CH.hsSleep=new Chart(document.getElementById('hsSleepChart'),{type:'bar',data:{labels,datasets:[
+    {type:'line',label:'7d snitt',data:S.map(o=>o.sleep7),borderColor:HS_RED,borderWidth:2.5,pointRadius:0,tension:.25,spanGaps:true,order:0},
+    {type:'line',label:'7 h',data:S.map(()=>7),borderColor:HS_LINE,borderDash:[5,4],borderWidth:1.5,pointRadius:0,order:1},
+    {label:'Natt',data:S.map(o=>o.sleep),backgroundColor:'rgba(230,230,240,.22)',barPercentage:.75,categoryPercentage:1,order:2}
+  ]},options:{...base,plugins:{legend:{display:false},tooltip:{filter:i=>i.dataset.label!=='7 h',callbacks:{label:c=>c.raw==null?null:c.dataset.label+': '+fmtHM(Math.round(c.raw*3600))}}},
+    scales:{x:xAx,y:{grid:grd,min:3,suggestedMax:9,ticks:{...tck,callback:v=>v+' h'}}}}});
+
+  // 5) Veckomonster
+  kill('hsWeek');
+  CH.hsWeek=new Chart(document.getElementById('hsWeekChart'),{type:'bar',data:{labels:HS_WD,datasets:[
+    {data:wd.map(w=>w.dev),backgroundColor:wd.map((w,i)=>i===weak&&w.dev<0?HS_RED:'rgba(230,230,240,.3)'),borderRadius:4,barPercentage:.6}
+  ]},options:{...base,interaction:{mode:'nearest',intersect:true},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>{const w=wd[c.dataIndex]; return w.m==null?'Ingen data':hsFmt(w.m,1)+' ms, '+(w.dev>=0?'+':'')+hsFmt(w.dev,1)+' % (n='+w.n+')';}}}},
+    scales:{x:{grid:{display:false},ticks:tck},y:{grid:{color:c=>c.tick.value===0?'rgba(230,230,240,.6)':'rgba(255,255,255,0.05)',lineWidth:c=>c.tick.value===0?2:1},ticks:{...tck,callback:v=>(v>0?'+':'')+v+'%'}}}}});
+
+  hsRenderExtra(S,labels,xAx,base);
+
+  // 6) Manad for manad
+  const months={}; S.forEach(o=>{(months[o.date.slice(0,7)]=months[o.date.slice(0,7)]||[]).push(o);});
+  const rows=Object.keys(months).sort().map(k=>{const L=months[k]; return {k, n:L.filter(o=>o.hrv!=null).length, hrv:hsMean(L.map(o=>o.hrv)), rhr:hsMean(L.map(o=>o.rhr)), sl:hsMean(L.map(o=>o.sleep))};});
+  let worst=null; rows.forEach(r=>{ if(r.n>=7&&r.hrv!=null&&(!worst||r.hrv<worst.hrv)) worst=r; });
+  document.getElementById('hsMonthBody').innerHTML=rows.map(r=>{const m=+r.k.slice(5)-1;
+    return '<tr'+(r===worst?' class="flag"':'')+'><td>'+HS_MON_L[m]+' '+r.k.slice(0,4)+'</td><td class="num">'+r.n+'</td><td class="num">'+hsFmt(r.hrv,1)+'</td><td class="num">'+hsFmt(r.rhr,1)+'</td><td class="num">'+(r.sl!=null?hsFmt(r.sl,1)+' h':'-')+'</td></tr>';}).join('');
 }
 
 // ══════════════════════════════════
@@ -1438,6 +2118,8 @@ function showPage(idx){
   document.querySelectorAll('.nav-btn').forEach((b,i)=>b.classList.toggle('active',i===idx));
   document.querySelectorAll('.page').forEach((p,i)=>p.classList.toggle('active',i===idx));
   const mob=document.getElementById('navMob'); if(mob) mob.value=idx;
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active',+b.dataset.idx===idx));
+  if(window.matchMedia('(max-width:640px)').matches) window.scrollTo(0,0);
   if(idx===0){renderTopBar();renderCal();renderWeekSummary();}
   if(idx===1) renderAE();
   if(idx===2) renderLoad();
@@ -1478,18 +2160,26 @@ function applyData(d,label){
 // ══════════════════════════════════
 // INIT
 // ══════════════════════════════════
+// Offline-start av appskalet. Kräver https eller localhost; annars hoppas det över.
+if('serviceWorker' in navigator && window.isSecureContext){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(e=>console.warn('SW:',e.message)));
+}
+
 (async function init(){
   loadZones();
   loadTLAnchors();
   loadMaxHr();
+  loadPlans();
+  updateSyncBtn();
   if(SUPABASE_URL&&SUPABASE_KEY){
     document.getElementById('dbStatus').textContent='Ansluter...';
-    try{const d=await sbFetch(SUPABASE_URL,SUPABASE_KEY);applyData(d,'Supabase live - '+d.activities.length+' pass');return;}
+    try{const d=await sbFetch(SUPABASE_URL,SUPABASE_KEY);applyData(d,'Supabase live - '+d.activities.length+' pass');loadRemotePlans();return;}
     catch(e){console.warn('Supabase fallback:',e.message);document.getElementById('dbStatus').textContent='Anslutning misslyckades';}
   }
   DATA=mockData();
   fillActSel('aeActSel'); fillPaceSel();
   renderTopBar(); renderCal(); renderWeekSummary();
+  loadRemotePlans();
 })();
 </script>
 </body>

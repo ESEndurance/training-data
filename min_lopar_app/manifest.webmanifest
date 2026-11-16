@@ -1,0 +1,17 @@
+{
+  "name": "ES Endurance Dashboard",
+  "short_name": "ES Endurance",
+  "description": "Träning, belastning, HRV och sömn från Garmin.",
+  "lang": "sv",
+  "start_url": "./training-dashboard.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#09090e",
+  "theme_color": "#111117",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
